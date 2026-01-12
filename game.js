@@ -1,5 +1,5 @@
 // ==========================================
-// [Part 0] 맵 생성 클래스 (중복 선언 방지 처리)
+// [Part 0] 맵 생성 및 클래스 중복 방지
 // ==========================================
 if (typeof window.MapGenerator === 'undefined') {
     window.MapGenerator = class MapGenerator {
@@ -16,9 +16,9 @@ if (typeof window.MapGenerator === 'undefined') {
                     const isCenter = (x >= 2 && x <= 4 && y >= 3 && y <= 5);
                     const rand = Math.random();
                     if (!isCenter) {
-                        if (rand < 0.15) type = 'Water';    
-                        else if (rand < 0.25) type = 'Mountain'; 
-                        else if (rand < 0.35) type = 'Sand';     
+                        if (rand < 0.15) type = 'Water';    // 이동 불가
+                        else if (rand < 0.25) type = 'Mountain'; // 이동 불가
+                        else if (rand < 0.35) type = 'Sand';     // 일반
                     }
                     if ((x===3 && y===1) || (x===3 && y===8)) type = 'Grass';
                     map[x][y] = { type: type };
@@ -30,338 +30,250 @@ if (typeof window.MapGenerator === 'undefined') {
 }
 
 // ==========================================
-// [Part 1] 전역 변수 설정
+// [Part 1] 전역 변수 및 DB (캐릭터 5종 풀세트)
 // ==========================================
-// 기존 변수들이 중복 선언되지 않도록 체크
-if (typeof window.myRole === 'undefined') {
-    window.myRole = null;
-    window.currentRoomId = null;
-    window.isMyTurn = false;
-    window.selectedCharKey = null;
-    window.game = null;
-}
+let myRole = null; let currentRoomId = null; let isMyTurn = false;
+let selectedCharKey = null; let game = null;
 
 const lobbyScreen = document.getElementById('lobby-screen');
 const charSelectScreen = document.getElementById('char-select-screen');
 const gameContainer = document.getElementById('game-container');
-const statusMsg = document.getElementById('status-msg');
-const matchBtn = document.getElementById('find-match-btn');
 const infoBox = document.getElementById('char-info-box');
-
-window.selectedChars = { host: null, guest: null };
 
 const DB = {
     SKILLS: {
-        SLASH: { name: "베기", power: 25, range: 1, cooldown: 0, desc: "근접 공격" },
-        UPPER_SLASH: { name: "상단 베기", power: 50, range: 1, cooldown: 3, desc: "강력한 일격" },
-        GUARD: { name: "가드", type: "buff", cooldown: 2, range: 0, desc: "피해 감소" },
-        SHIELD_THROW: { name: "방패 던지기", power: 30, range: 4, triggerReAction: true, isUltimate: true, desc: "공격 후 재행동" },
-        MAGIC_MISSILE: { name: "매직미사일", power: 20, range: 5, cost: 10, cooldown: 0, desc: "마법 화살" },
-        FIREBALL: { name: "파이어볼", power: 30, range: 5, cost: 20, cooldown: 2, desc: "화염구 발사" },
-        INFERNITY: { name: "인페르니티", power: 110, range: 8, cost: 100, cooldown: 5, isUltimate: true, desc: "최강 마법" },
-        STEALTH: { name: "은신", type: "buff", range: 0, cooldown: 4, triggerReAction: true, desc: "은신 & 재행동" },
-        BACKSTAB: { name: "배후노리기", power: 60, range: 6, cooldown: 0, isUltimate: true, reqStealth: true, teleportBehind: true, desc: "적 배후 기습" }
+        // 기사
+        SLASH: { name: "베기", power: 25, range: 1, cooldown: 0, desc: "근접 기본 공격입니다." },
+        UPPER_SLASH: { name: "상단 베기", power: 50, range: 1, cooldown: 3, desc: "강력한 일격을 가합니다." },
+        GUARD: { name: "가드", type: "buff", range: 0, cooldown: 2, desc: "방어 태세로 피해를 줄입니다." },
+        SHIELD_THROW: { name: "방패 던지기", power: 30, range: 4, triggerReAction: true, isUltimate: true, desc: "[궁극기] 공격 후 즉시 재행동합니다." },
+        // 마법사
+        MAGIC_MISSILE: { name: "매직미사일", power: 20, range: 5, cost: 10, cooldown: 0, desc: "마력 화살을 발사합니다. MP 10." },
+        FIREBALL: { name: "파이어볼", power: 35, range: 5, cost: 20, cooldown: 2, desc: "화염구를 던집니다. MP 20." },
+        INFERNITY: { name: "인페르니티", power: 110, range: 8, cost: 100, cooldown: 5, isUltimate: true, desc: "[궁극기] 초강력 범위 마법. MP 100." },
+        // 닌자
+        STEALTH: { name: "은신", type: "buff", range: 0, cooldown: 4, triggerReAction: true, desc: "은신 상태가 되며 재행동합니다." },
+        BACKSTAB: { name: "배후노리기", power: 65, range: 6, cooldown: 0, isUltimate: true, reqStealth: true, teleportBehind: true, desc: "[궁극기] 은신 중 적의 뒤로 이동해 기습." },
+        // 보우 마스터
+        SNIPE: { name: "저격", power: 25, range: 6, cooldown: 0, desc: "장거리 사격을 가합니다." },
+        HEADSHOT: { name: "헤드샷", power: 80, range: 8, cooldown: 5, isUltimate: true, desc: "[궁극기] 매우 먼 거리에서 치명적인 피해를 줍니다." },
+        // 패스파인더
+        DAGGER_STAB: { name: "단검 찌르기", power: 20, range: 1, cooldown: 0, desc: "기본 단검 공격입니다." },
+        AMBUSH_STRIKE: { name: "석궁 쇄도", power: 10, range: 5, cooldown: 4, isUltimate: true, desc: "[궁극기] 이동 거리에 비례해 위력이 폭증합니다." }
     },
     CHARACTERS: {
-        KNIGHT: { name: "기사", hp: 120, mp: 0, move: [3, 4], skills: ["SLASH", "UPPER_SLASH", "GUARD", "SHIELD_THROW"], color: '#C0C0C0', desc: "탱커 캐릭터" },
-        MAGE: { name: "마법사", hp: 100, mp: 100, move: [2, 3], skills: ["MAGIC_MISSILE", "FIREBALL", "INFERNITY"], color: '#9C27B0', desc: "마법 딜러" },
-        NINJA: { name: "닌자", hp: 85, mp: 0, move: [4, 5], skills: ["STEALTH", "BACKSTAB"], color: '#333333', desc: "암살자 캐릭터" }
+        KNIGHT: { name: "기사", hp: 120, mp: 0, move: [3, 4], skills: ["SLASH", "UPPER_SLASH", "GUARD", "SHIELD_THROW"], color: '#C0C0C0', desc: "공수 밸런스가 좋은 탱커 유닛." },
+        MAGE: { name: "마법사", hp: 100, mp: 100, move: [2, 3], skills: ["MAGIC_MISSILE", "FIREBALL", "INFERNITY"], color: '#9C27B0', desc: "강력한 마법으로 적을 제압하는 딜러." },
+        NINJA: { name: "닌자", hp: 85, mp: 0, move: [4, 5], skills: ["STEALTH", "BACKSTAB"], color: '#333333', desc: "은신과 기습에 특화된 암살자." },
+        BOW_MASTER: { name: "보우 마스터", hp: 90, mp: 0, move: [3, 4], skills: ["SNIPE", "HEADSHOT"], color: '#2E7D32', desc: "초장거리 저격에 특화된 궁수." },
+        PATHFINDER: { name: "패스파인더", hp: 95, mp: 0, move: [4, 6], skills: ["DAGGER_STAB", "AMBUSH_STRIKE"], color: '#FF6F00', desc: "이동 거리에 따라 위력이 변하는 정찰병." }
     }
 };
 
-let mapData = [], visualGrid = [];
-const mapWidth = 7, mapHeight = 9, gridSize = 60;
-let playerUnit, enemyUnit; 
-let gameState = 0; 
-let statusText, actionMenuGroup, skillDescText;
-let reservedX, reservedY, selectedSkill; 
-let moveHighlights = [];
-
-const STATE = { IDLE: 0, MOVE_SELECT: 1, ACTION_WAIT: 2, TARGET_SELECT: 3, BUSY: 4, ENEMY_TURN: 5 };
+let mapData = []; let visualGrid = []; const mapWidth = 7; const mapHeight = 9; const gridSize = 60;
+let playerUnit; let enemyUnit; let gameState = 0; let statusText; let actionMenuGroup; let skillDescText;
+let reservedX; let reservedY; let selectedSkill; let moveHighlights = [];
+const STATE = { IDLE: 0, MOVE_SELECT: 1, ACTION_WAIT: 2, TARGET_SELECT: 3, BUSY: 4 };
 
 // ==========================================
-// [Part 2] 매칭 로직
+// [Part 2] 매칭 및 캐릭터 선택 로직 (중복 제거)
 // ==========================================
-matchBtn.onclick = () => {
+document.getElementById('find-match-btn').onclick = () => {
     if (!window.db) return;
-    matchBtn.disabled = true;
-    matchBtn.innerText = "매칭 중...";
-    findMatch();
+    document.getElementById('find-match-btn').disabled = true;
+    const roomsRef = window.dbRef(window.db, 'rooms');
+    window.dbGet(roomsRef).then((snap) => {
+        const rooms = snap.val(); let found = null;
+        if (rooms) for (let id in rooms) if (rooms[id].status === 'waiting') { found = id; break; }
+        if (found) joinRoom(found); else createRoom();
+    });
 };
 
-function findMatch() {
-    const roomsRef = window.dbRef(window.db, 'rooms');
-    window.dbGet(roomsRef).then((snapshot) => {
-        const rooms = snapshot.val();
-        let foundRoom = null;
-        if (rooms) {
-            for (let id in rooms) {
-                if (rooms[id].status === 'waiting') { foundRoom = id; break; }
-            }
-        }
-        if (foundRoom) joinRoom(foundRoom); else createRoom();
-    }).catch(err => { matchBtn.disabled = false; });
-}
-
 function createRoom() {
-    const newRoomRef = window.dbPush(window.dbRef(window.db, 'rooms'));
-    window.currentRoomId = newRoomRef.key;
-    window.myRole = 'host';
+    const ref = window.dbPush(window.dbRef(window.db, 'rooms'));
+    currentRoomId = ref.key; myRole = 'host';
     const mapGen = new MapGenerator(mapWidth, mapHeight);
-    window.dbSet(newRoomRef, {
-        status: 'waiting', turn: 'host', map: mapGen.generate(), turnCount: 1,
-        hostReady: false, guestReady: false
-    });
-    window.dbOnValue(newRoomRef, (snap) => { if (snap.val()?.status === 'selecting') onMatchFound(); });
+    window.dbSet(ref, { status: 'waiting', turn: 'host', map: mapGen.generate(), hostReady: false, guestReady: false });
+    window.dbOnValue(ref, (s) => { if (s.val()?.status === 'selecting') onMatchFound(); });
 }
 
-function joinRoom(roomId) {
-    window.currentRoomId = roomId; window.myRole = 'guest';
-    window.dbUpdate(window.dbRef(window.db, `rooms/${roomId}`), { status: 'selecting' });
+function joinRoom(id) {
+    currentRoomId = id; myRole = 'guest';
+    window.dbUpdate(window.dbRef(window.db, `rooms/${id}`), { status: 'selecting' });
     onMatchFound();
 }
 
 function onMatchFound() {
     lobbyScreen.style.display = 'none';
-    startCharSelectUI();
+    charSelectScreen.style.display = 'flex';
+    const grid = document.getElementById('char-grid');
+    grid.innerHTML = '';
+    Object.keys(DB.CHARACTERS).forEach(k => {
+        const c = DB.CHARACTERS[k];
+        const btn = document.createElement('div');
+        btn.innerText = c.name; btn.style.cssText = `width:90px; height:50px; background:${c.color}; border:2px solid #fff; cursor:pointer; color:white; font-weight:bold; display:flex; align-items:center; justify-content:center;`;
+        btn.onmouseenter = () => infoBox.innerText = c.desc;
+        btn.onclick = () => {
+            selectedCharKey = k;
+            window.dbUpdate(window.dbRef(window.db, `rooms/${currentRoomId}`), { [`${myRole}Char`]: k });
+            document.getElementById('lock-in-btn').disabled = false;
+        };
+        grid.appendChild(btn);
+    });
 }
 
-function startCharSelectUI() {
-    charSelectScreen.style.display = 'flex';
-    const charGrid = document.getElementById('char-grid');
-    const lockInBtn = document.getElementById('lock-in-btn');
-    charGrid.innerHTML = '';
+document.getElementById('lock-in-btn').onclick = () => {
+    window.dbUpdate(window.dbRef(window.db, `rooms/${currentRoomId}`), { [`${myRole}Ready`]: true });
+    document.getElementById('lock-in-btn').disabled = true;
+};
 
-    Object.keys(DB.CHARACTERS).forEach(key => {
-        const char = DB.CHARACTERS[key];
-        const btn = document.createElement('div');
-        btn.innerText = char.name;
-        btn.style.cssText = `width:100px; height:50px; background:${char.color}; cursor:pointer; display:flex; align-items:center; justify-content:center; border:2px solid #fff; color:white; font-weight:bold; margin:5px;`;
-        
-        btn.onmouseenter = () => { if(infoBox) infoBox.innerText = char.desc; };
-        btn.onclick = () => {
-            window.selectedCharKey = key;
-            window.dbUpdate(window.dbRef(window.db, `rooms/${window.currentRoomId}`), { [`${window.myRole}Char`]: key });
-            lockInBtn.disabled = false;
-        };
-        charGrid.appendChild(btn);
-    });
-
-    lockInBtn.onclick = () => {
-        window.dbUpdate(window.dbRef(window.db, `rooms/${window.currentRoomId}`), { [`${window.myRole}Ready`]: true });
-        lockInBtn.disabled = true;
-        lockInBtn.innerText = "준비 완료";
-    };
-
-    window.dbOnValue(window.dbRef(window.db, `rooms/${window.currentRoomId}`), (snap) => {
-        const data = snap.val();
-        if (!data) return;
-        if (data.hostReady && data.guestReady && data.status !== 'playing') {
-            window.selectedChars.host = data.hostChar;
-            window.selectedChars.guest = data.guestChar;
-            mapData = data.map;
-            if (window.myRole === 'host') window.dbUpdate(window.dbRef(window.db, `rooms/${window.currentRoomId}`), { status: 'playing' });
-            charSelectScreen.style.display = 'none';
-            startGameUI();
+// 매칭 감시 및 게임 시작
+setTimeout(() => {
+    window.dbOnValue(window.dbRef(window.db, `rooms/${currentRoomId}`), (snap) => {
+        const d = snap.val(); if (!d) return;
+        if (d.hostReady && d.guestReady && d.status !== 'playing') {
+            window.selectedChars = { host: d.hostChar, guest: d.guestChar };
+            mapData = d.map;
+            if (myRole === 'host') window.dbUpdate(window.dbRef(window.db, `rooms/${currentRoomId}`), { status: 'playing' });
+            charSelectScreen.style.display = 'none'; gameContainer.style.display = 'block';
+            if (!game) game = new Phaser.Game(config);
         }
     });
-}
-
-function startGameUI() {
-    gameContainer.style.display = 'block';
-    if (!window.game) window.game = new Phaser.Game(config);
-}
+}, 1000);
 
 // ==========================================
-// [Part 3] 인게임 시스템
+// [Part 3] 전투 시스템 (Phaser)
 // ==========================================
 class Unit {
     constructor(scene, data, x, y, isMe) {
-        this.scene = scene;
-        this.name = data.name;
-        this.hp = data.hp; this.maxHp = data.hp;
-        this.x = x; this.y = y;
-        this.isMe = isMe;
+        this.scene = scene; this.name = data.name; this.hp = data.hp; this.maxHp = data.hp;
+        this.x = x; this.y = y; this.isMe = isMe;
         this.skills = data.skills.map(k => ({...DB.SKILLS[k], id: k}));
-        this.moveRange = data.move;
-        this.cooldowns = {};
-        this.isReAction = false;
-
+        this.moveRange = data.move; this.cooldowns = {}; this.isReAction = false;
         const pos = gridToWorld(x, y);
-        this.sprite = scene.add.rectangle(pos.x, pos.y, 35, 35, Phaser.Display.Color.HexStringToColor(data.color).color);
-        this.sprite.setStrokeStyle(2, 0xffffff);
-        this.hpText = scene.add.text(pos.x, pos.y - 35, `${this.hp}/${this.maxHp}`, { fontSize: '14px', fill: '#fff' }).setOrigin(0.5);
+        this.sprite = scene.add.rectangle(pos.x, pos.y, 35, 35, Phaser.Display.Color.HexStringToColor(data.color).color).setStrokeStyle(2, 0xffffff);
+        this.hpText = scene.add.text(pos.x, pos.y - 35, `${this.hp}/${this.maxHp}`, { fontSize: '14px', fontStyle: 'bold' }).setOrigin(0.5);
     }
     updatePos(gx, gy) {
-        this.x = gx; this.y = gy;
-        const pos = gridToWorld(gx, gy);
-        this.sprite.x = pos.x; this.sprite.y = pos.y;
-        this.hpText.x = pos.x; this.hpText.y = pos.y - 35;
+        this.x = gx; this.y = gy; const pos = gridToWorld(gx, gy);
+        this.sprite.x = pos.x; this.sprite.y = pos.y; this.hpText.x = pos.x; this.hpText.y = pos.y - 35;
     }
-    takeDamage(dmg) {
-        this.hp -= dmg;
-        this.hpText.setText(`${this.hp}/${this.maxHp}`);
-        return this.hp <= 0;
-    }
+    takeDamage(d) { this.hp -= d; this.hpText.setText(`${this.hp}/${this.maxHp}`); return this.hp <= 0; }
 }
 
 const config = {
     type: Phaser.AUTO, parent: 'game-container', width: 800, height: 600,
-    backgroundColor: '#1a1a1a', scene: { preload: preload, create: create }
+    backgroundColor: '#1a1a1a', scene: { create: create }
 };
 
-function preload() {}
-
 function create() {
-    const startX = (800 - (mapWidth * gridSize)) / 2;
-    const startY = (600 - (mapHeight * gridSize)) / 2;
-
+    const sX = (800 - (mapWidth * gridSize)) / 2; const sY = (600 - (mapHeight * gridSize)) / 2;
     for (let x = 0; x < mapWidth; x++) {
         visualGrid[x] = [];
         for (let y = 0; y < mapHeight; y++) {
             const type = mapData[x][y].type;
-            let color = 0x3d5e3a; 
-            if (type === 'Water') color = 0x1a4a7a;
-            if (type === 'Mountain') color = 0x4a4a4a;
-            if (type === 'Sand') color = 0x8a7a4a;
-
-            const tile = this.add.rectangle(startX + x*gridSize + 30, startY + y*gridSize + 30, 56, 56, color)
-                .setStrokeStyle(2, 0x000000, 0.5) 
-                .setInteractive();
-            
-            visualGrid[x][y] = tile;
-            tile.on('pointerdown', () => onTileClick(x, y));
+            let color = type === 'Water' ? 0x1a4a7a : type === 'Mountain' ? 0x4a4a4a : type === 'Sand' ? 0x8a7a4a : 0x3d5e3a;
+            const tile = this.add.rectangle(sX + x*gridSize + 30, sY + y*gridSize + 30, 56, 56, color).setStrokeStyle(2, 0x000, 0.5).setInteractive();
+            visualGrid[x][y] = tile; tile.on('pointerdown', () => onTileClick(x, y));
         }
     }
-
-    const myChar = (window.myRole === 'host') ? window.selectedChars.host : window.selectedChars.guest;
-    const enemyChar = (window.myRole === 'host') ? window.selectedChars.guest : window.selectedChars.host;
-    playerUnit = new Unit(this, DB.CHARACTERS[myChar], 3, (window.myRole === 'host' ? 8 : 1), true);
-    enemyUnit = new Unit(this, DB.CHARACTERS[enemyChar], 3, (window.myRole === 'host' ? 1 : 8), false);
-
+    const myK = myRole === 'host' ? window.selectedChars.host : window.selectedChars.guest;
+    const enK = myRole === 'host' ? window.selectedChars.guest : window.selectedChars.host;
+    playerUnit = new Unit(this, DB.CHARACTERS[myK], 3, myRole === 'host' ? 8 : 1, true);
+    enemyUnit = new Unit(this, DB.CHARACTERS[enK], 3, myRole === 'host' ? 1 : 8, false);
     statusText = this.add.text(10, 10, "전투 시작", { fontSize: '20px' });
     skillDescText = this.add.text(400, 560, "", { fontSize: '14px', backgroundColor: '#000c', padding: 8 }).setOrigin(0.5).setVisible(false);
-    
-    createActionMenu(this);
-    setupSync();
+    createActionMenu(this); setupSync();
 }
 
 function onTileClick(x, y) {
-    if (!window.isMyTurn || gameState === STATE.BUSY) return;
+    if (!isMyTurn || gameState === STATE.BUSY) return;
     if (gameState === STATE.IDLE && x === playerUnit.x && y === playerUnit.y) {
-        clearHighlights();
-        showMoveRange(playerUnit.x, playerUnit.y, Phaser.Math.Between(playerUnit.moveRange[0], playerUnit.moveRange[1]));
+        clearHighlights(); showMoveRange(x, y, Phaser.Math.Between(playerUnit.moveRange[0], playerUnit.moveRange[1]));
         gameState = STATE.MOVE_SELECT;
-    } 
-    else if (gameState === STATE.MOVE_SELECT && isHighlighted(x, y)) {
-        reservedX = x; reservedY = y;
-        clearHighlights();
-        const pos = gridToWorld(x, y);
-        moveHighlights.push({x, y, rect: playerUnit.scene.add.circle(pos.x, pos.y, 8, 0xffffff)});
-        gameState = STATE.ACTION_WAIT;
-        openActionMenu();
-    }
-    else if (gameState === STATE.TARGET_SELECT && isHighlighted(x, y)) {
+    } else if (gameState === STATE.MOVE_SELECT && isHighlighted(x, y)) {
+        reservedX = x; reservedY = y; clearHighlights();
+        const p = gridToWorld(x, y); moveHighlights.push({x, y, rect: playerUnit.scene.add.circle(p.x, p.y, 8, 0xfff)});
+        gameState = STATE.ACTION_WAIT; openActionMenu();
+    } else if (gameState === STATE.TARGET_SELECT && isHighlighted(x, y)) {
         if (x === enemyUnit.x && y === enemyUnit.y) executeAction(selectedSkill, enemyUnit);
         else if (selectedSkill.range === 0 && x === reservedX && y === reservedY) executeAction(selectedSkill, playerUnit);
     }
 }
 
-function showMoveRange(sx, sy, range) {
-    for (let x = 0; x < mapWidth; x++) {
-        for (let y = 0; y < mapHeight; y++) {
-            const dist = Math.abs(x - sx) + Math.abs(y - sy);
-            const type = mapData[x][y].type;
-            if (type === 'Mountain' || type === 'Water') continue; 
-            if (dist > 0 && dist <= range) {
-                const pos = gridToWorld(x, y);
-                moveHighlights.push({x, y, rect: playerUnit.scene.add.rectangle(pos.x, pos.y, 50, 50, 0x0000ff, 0.4)});
-            }
-        }
+function showMoveRange(sx, sy, r) {
+    for (let x = 0; x < mapWidth; x++) for (let y = 0; y < mapHeight; y++) {
+        const d = Math.abs(x - sx) + Math.abs(y - sy); const t = mapData[x][y].type;
+        if (t === 'Mountain' || t === 'Water' || d === 0 || d > r) continue;
+        const p = gridToWorld(x, y); moveHighlights.push({x, y, rect: playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0x00f, 0.4)});
     }
 }
 
-function executeAction(skill, target) {
-    gameState = STATE.BUSY; closeActionMenu(); clearHighlights();
-    playerUnit.updatePos(reservedX, reservedY);
-    if (skill.id !== 'WAIT') {
-        if (skill.cooldown > 0) playerUnit.cooldowns[skill.id] = skill.cooldown;
-        if (skill.power && target) target.takeDamage(skill.power);
-        if (skill.triggerReAction && !playerUnit.isReAction) {
-            playerUnit.isReAction = true;
-            gameState = STATE.IDLE; updateSync(false); return;
+function executeAction(s, t) {
+    gameState = STATE.BUSY; closeActionMenu(); clearHighlights(); playerUnit.updatePos(reservedX, reservedY);
+    if (s.id !== 'WAIT') {
+        if (s.cooldown > 0) playerUnit.cooldowns[s.id] = s.cooldown;
+        if (s.power && t) t.takeDamage(s.power);
+        if (s.triggerReAction && !playerUnit.isReAction) {
+            playerUnit.isReAction = true; gameState = STATE.IDLE; updateSync(false); return;
         }
     }
-    playerUnit.isReAction = false;
-    updateSync(true);
+    playerUnit.isReAction = false; updateSync(true);
 }
 
-function updateSync(endTurn) {
-    const updates = { [`${window.myRole}Unit`]: { x: playerUnit.x, y: playerUnit.y, hp: playerUnit.hp } };
-    if (endTurn) updates.turn = (window.myRole === 'host' ? 'guest' : 'host');
-    window.dbUpdate(window.dbRef(window.db, `rooms/${window.currentRoomId}`), updates);
+function updateSync(end) {
+    const updates = { [`${myRole}Unit`]: { x: playerUnit.x, y: playerUnit.y, hp: playerUnit.hp } };
+    if (end) updates.turn = myRole === 'host' ? 'guest' : 'host';
+    window.dbUpdate(window.dbRef(window.db, `rooms/${currentRoomId}`), updates);
 }
 
 function setupSync() {
-    window.dbOnValue(window.dbRef(window.db, `rooms/${window.currentRoomId}`), (snap) => {
-        const data = snap.val();
-        if (!data) return;
-        if (data.turn === window.myRole && !window.isMyTurn) {
-            window.isMyTurn = true; gameState = STATE.IDLE;
+    window.dbOnValue(window.dbRef(window.db, `rooms/${currentRoomId}`), (snap) => {
+        const d = snap.val(); if (!d) return;
+        if (d.turn === myRole && !isMyTurn) {
+            isMyTurn = true; gameState = STATE.IDLE; statusText.setText("내 턴");
             for (let k in playerUnit.cooldowns) if (playerUnit.cooldowns[k] > 0) playerUnit.cooldowns[k]--;
-        } else if (data.turn !== window.myRole) {
-            window.isMyTurn = false;
-        }
-        const enemyData = data[window.myRole === 'host' ? 'guestUnit' : 'hostUnit'];
-        if (enemyData) enemyUnit.updatePos(enemyData.x, enemyData.y);
+        } else if (d.turn !== myRole) { isMyTurn = false; statusText.setText("상대 턴"); }
+        const enD = d[myRole === 'host' ? 'guestUnit' : 'hostUnit'];
+        if (enD) enemyUnit.updatePos(enD.x, enD.y);
     });
 }
 
 function gridToWorld(x, y) {
-    const sX = (800 - (mapWidth * gridSize)) / 2;
-    const sY = (600 - (mapHeight * gridSize)) / 2;
+    const sX = (800 - (mapWidth * gridSize)) / 2; const sY = (600 - (mapHeight * gridSize)) / 2;
     return { x: sX + x*gridSize + 30, y: sY + y*gridSize + 30 };
 }
 function clearHighlights() { moveHighlights.forEach(h => h.rect.destroy()); moveHighlights = []; }
 function isHighlighted(x, y) { return moveHighlights.some(h => h.x === x && h.y === y); }
-function createActionMenu(scene) { actionMenuGroup = scene.add.group(); }
+function createActionMenu(s) { actionMenuGroup = s.add.group(); }
 
 function openActionMenu() {
-    actionMenuGroup.clear(true, true);
-    let y = 150;
-    playerUnit.skills.forEach(skill => {
-        const cd = playerUnit.cooldowns[skill.id] || 0;
-        const isDisabled = cd > 0 || (playerUnit.isReAction && skill.isUltimate);
-        const btn = playerUnit.scene.add.text(700, y, skill.name + (cd>0 ? `(${cd})` : ""), {
-            backgroundColor: isDisabled ? '#444' : '#900', padding: 8, fixedWidth: 120, align: 'center'
+    actionMenuGroup.clear(true, true); let y = 150;
+    playerUnit.skills.forEach(s => {
+        const cd = playerUnit.cooldowns[s.id] || 0;
+        const dis = cd > 0 || (playerUnit.isReAction && s.isUltimate);
+        const btn = playerUnit.scene.add.text(700, y, s.name + (cd>0 ? `(${cd})` : ""), {
+            backgroundColor: dis ? '#444' : '#900', padding: 8, fixedWidth: 120, align: 'center'
         }).setInteractive();
-        btn.on('pointerover', () => { skillDescText.setText(`[${skill.name}] ${skill.desc}`).setVisible(true); });
+        btn.on('pointerover', () => skillDescText.setText(`[${s.name}] ${s.desc}`).setVisible(true));
         btn.on('pointerout', () => skillDescText.setVisible(false));
-        if (!isDisabled) {
-            btn.on('pointerdown', () => {
-                skillDescText.setVisible(false); selectedSkill = skill;
-                if (skill.range > 0) {
-                    gameState = STATE.TARGET_SELECT; clearHighlights();
-                    showTargetRange(reservedX, reservedY, skill.range);
-                } else executeAction(skill, playerUnit);
-            });
-        }
+        if (!dis) btn.on('pointerdown', () => {
+            skillDescText.setVisible(false); selectedSkill = s;
+            if (s.range > 0) { gameState = STATE.TARGET_SELECT; clearHighlights(); showTargetRange(reservedX, reservedY, s.range); }
+            else executeAction(s, playerUnit);
+        });
         actionMenuGroup.add(btn); y += 50;
     });
     const wBtn = playerUnit.scene.add.text(700, y, "대기", { backgroundColor: '#005', padding: 8, fixedWidth: 120, align: 'center' }).setInteractive();
-    wBtn.on('pointerdown', () => executeAction({id: 'WAIT'}, null));
-    actionMenuGroup.add(wBtn);
+    wBtn.on('pointerdown', () => executeAction({id: 'WAIT'}, null)); actionMenuGroup.add(wBtn);
 }
 
-function showTargetRange(sx, sy, range) {
-    for (let x = 0; x < mapWidth; x++) {
-        for (let y = 0; y < mapHeight; y++) {
-            if (Math.abs(x - sx) + Math.abs(y - sy) <= range) {
-                const pos = gridToWorld(x, y);
-                moveHighlights.push({x, y, rect: playerUnit.scene.add.rectangle(pos.x, pos.y, 50, 50, 0xff0000, 0.4)});
-            }
+function showTargetRange(sx, sy, r) {
+    for (let x = 0; x < mapWidth; x++) for (let y = 0; y < mapHeight; y++) {
+        if (Math.abs(x - sx) + Math.abs(y - sy) <= r) {
+            const p = gridToWorld(x, y); moveHighlights.push({x, y, rect: playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0xf00, 0.4)});
         }
     }
 }
 
-function closeActionMenu() { actionMenuGroup.clear(true, true); if(skillDescText) skillDescText.setVisible(false); }
+function closeActionMenu() { actionMenuGroup.clear(true, true); skillDescText.setVisible(false); }
