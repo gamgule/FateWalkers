@@ -1,29 +1,31 @@
 // ==========================================
-// [Part 0] 맵 생성 및 동기화 클래스
+// [Part 0] 맵 생성 및 동기화 클래스 (중복 선언 방지)
 // ==========================================
-class MapGenerator {
-    constructor(width, height) {
-        this.width = width;
-        this.height = height;
-    }
-    generate() {
-        let map = [];
-        for (let x = 0; x < this.width; x++) {
-            map[x] = [];
-            for (let y = 0; y < this.height; y++) {
-                let type = 'Grass'; 
-                const isCenter = (x >= 2 && x <= 4 && y >= 3 && y <= 5);
-                const rand = Math.random();
-                if (!isCenter) {
-                    if (rand < 0.15) type = 'Water';    
-                    else if (rand < 0.25) type = 'Mountain'; 
-                    else if (rand < 0.35) type = 'Sand';     
-                }
-                if ((x===3 && y===1) || (x===3 && y===8)) type = 'Grass';
-                map[x][y] = { type: type };
-            }
+if (typeof MapGenerator === 'undefined') {
+    window.MapGenerator = class MapGenerator {
+        constructor(width, height) {
+            this.width = width;
+            this.height = height;
         }
-        return map;
+        generate() {
+            let map = [];
+            for (let x = 0; x < this.width; x++) {
+                map[x] = [];
+                for (let y = 0; y < this.height; y++) {
+                    let type = 'Grass'; 
+                    const isCenter = (x >= 2 && x <= 4 && y >= 3 && y <= 5);
+                    const rand = Math.random();
+                    if (!isCenter) {
+                        if (rand < 0.15) type = 'Water';    // 이동 불가
+                        else if (rand < 0.25) type = 'Mountain'; // 이동 불가
+                        else if (rand < 0.35) type = 'Sand';     // 일반 땅
+                    }
+                    if ((x===3 && y===1) || (x===3 && y===8)) type = 'Grass';
+                    map[x][y] = { type: type };
+                }
+            }
+            return map;
+        }
     }
 }
 
@@ -75,7 +77,7 @@ let moveHighlights = [];
 const STATE = { IDLE: 0, MOVE_SELECT: 1, ACTION_WAIT: 2, TARGET_SELECT: 3, BUSY: 4, ENEMY_TURN: 5 };
 
 // ==========================================
-// [Part 2] 매칭 및 리셋 로직
+// [Part 2] 매칭 로직 (네가 고친 부분 유지)
 // ==========================================
 matchBtn.addEventListener('click', () => {
     if (!window.db) return;
@@ -95,6 +97,9 @@ function findMatch() {
             }
         }
         if (foundRoom) joinRoom(foundRoom); else createRoom();
+    }).catch(err => {
+        console.error(err);
+        matchBtn.disabled = false;
     });
 }
 
@@ -131,7 +136,7 @@ function startCharSelectUI() {
         const char = DB.CHARACTERS[key];
         const btn = document.createElement('div');
         btn.innerText = char.name;
-        btn.style.cssText = `width:100px; height:50px; background:${char.color}; cursor:pointer; display:flex; align-items:center; justify-content:center; border:2px solid #fff; color:white; font-weight:bold;`;
+        btn.style.cssText = `width:100px; height:50px; background:${char.color}; cursor:pointer; display:flex; align-items:center; justify-content:center; border:2px solid #fff; color:white; font-weight:bold; margin:5px;`;
         
         btn.onmouseenter = () => infoBox.innerText = char.desc;
         btn.onmouseleave = () => infoBox.innerText = "캐릭터를 선택하세요.";
@@ -169,7 +174,7 @@ function startGameUI() {
 }
 
 // ==========================================
-// [Part 3] 전투 시스템 및 유닛
+// [Part 3] 전투 시스템 (테두리 및 칸 구분 강화)
 // ==========================================
 class Unit {
     constructor(scene, data, x, y, isMe) {
@@ -221,6 +226,7 @@ function create() {
             if (type === 'Mountain') color = 0x4a4a4a;
             if (type === 'Sand') color = 0x8a7a4a;
 
+            // [칸 구분 강화] 검은색 테두리 추가
             const tile = this.add.rectangle(startX + x*gridSize + 30, startY + y*gridSize + 30, 56, 56, color)
                 .setStrokeStyle(2, 0x000000, 0.5) 
                 .setInteractive();
