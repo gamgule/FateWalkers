@@ -30,7 +30,7 @@ if (typeof window.MapGenerator === 'undefined') {
 }
 
 // ==========================================
-// [Part 1] 전역 변수 및 DB (캐릭터 5종 풀세트)
+// [Part 1] 전역 변수 및 DB (5개 캐릭터 완전체)
 // ==========================================
 let myRole = null; let currentRoomId = null; let isMyTurn = false;
 let selectedCharKey = null; let game = null;
@@ -42,31 +42,26 @@ const infoBox = document.getElementById('char-info-box');
 
 const DB = {
     SKILLS: {
-        // 기사
         SLASH: { name: "베기", power: 25, range: 1, cooldown: 0, desc: "근접 기본 공격입니다." },
         UPPER_SLASH: { name: "상단 베기", power: 50, range: 1, cooldown: 3, desc: "강력한 일격을 가합니다." },
         GUARD: { name: "가드", type: "buff", range: 0, cooldown: 2, desc: "방어 태세로 피해를 줄입니다." },
-        SHIELD_THROW: { name: "방패 던지기", power: 30, range: 4, triggerReAction: true, isUltimate: true, desc: "[궁극기] 공격 후 즉시 재행동합니다." },
-        // 마법사
-        MAGIC_MISSILE: { name: "매직미사일", power: 20, range: 5, cost: 10, cooldown: 0, desc: "마력 화살을 발사합니다. MP 10." },
-        FIREBALL: { name: "파이어볼", power: 35, range: 5, cost: 20, cooldown: 2, desc: "화염구를 던집니다. MP 20." },
-        INFERNITY: { name: "인페르니티", power: 110, range: 8, cost: 100, cooldown: 5, isUltimate: true, desc: "[궁극기] 초강력 범위 마법. MP 100." },
-        // 닌자
-        STEALTH: { name: "은신", type: "buff", range: 0, cooldown: 4, triggerReAction: true, desc: "은신 상태가 되며 재행동합니다." },
-        BACKSTAB: { name: "배후노리기", power: 65, range: 6, cooldown: 0, isUltimate: true, reqStealth: true, teleportBehind: true, desc: "[궁극기] 은신 중 적의 뒤로 이동해 기습." },
-        // 보우 마스터
-        SNIPE: { name: "저격", power: 25, range: 6, cooldown: 0, desc: "장거리 사격을 가합니다." },
-        HEADSHOT: { name: "헤드샷", power: 80, range: 8, cooldown: 5, isUltimate: true, desc: "[궁극기] 매우 먼 거리에서 치명적인 피해를 줍니다." },
-        // 패스파인더
-        DAGGER_STAB: { name: "단검 찌르기", power: 20, range: 1, cooldown: 0, desc: "기본 단검 공격입니다." },
-        AMBUSH_STRIKE: { name: "석궁 쇄도", power: 10, range: 5, cooldown: 4, isUltimate: true, desc: "[궁극기] 이동 거리에 비례해 위력이 폭증합니다." }
+        SHIELD_THROW: { name: "방패 던지기", power: 30, range: 4, triggerReAction: true, isUltimate: true, desc: "[궁극기] 공격 후 재행동." },
+        MAGIC_MISSILE: { name: "매직미사일", power: 20, range: 5, cost: 10, cooldown: 0, desc: "마력 화살 발사. MP 10." },
+        FIREBALL: { name: "파이어볼", power: 35, range: 5, cost: 20, cooldown: 2, desc: "화염구 발사. MP 20." },
+        INFERNITY: { name: "인페르니티", power: 110, range: 8, cost: 100, cooldown: 5, isUltimate: true, desc: "[궁극기] 초강력 마법. MP 100." },
+        STEALTH: { name: "은신", type: "buff", range: 0, cooldown: 4, triggerReAction: true, desc: "은신 후 재행동." },
+        BACKSTAB: { name: "배후노리기", power: 65, range: 6, cooldown: 0, isUltimate: true, reqStealth: true, teleportBehind: true, desc: "[궁극기] 적 뒤로 순간이동 습격." },
+        SNIPE: { name: "저격", power: 25, range: 6, cooldown: 0, desc: "먼 거리의 적을 저격합니다." },
+        HEADSHOT: { name: "헤드샷", power: 80, range: 8, cooldown: 5, isUltimate: true, desc: "[궁극기] 치명적인 일격." },
+        DAGGER_STAB: { name: "단검 찌르기", power: 20, range: 1, cooldown: 0, desc: "기본 단검 공격." },
+        AMBUSH_STRIKE: { name: "석궁 쇄도", power: 10, range: 5, cooldown: 4, isUltimate: true, desc: "[궁극기] 이동 거리 비례 데미지." }
     },
     CHARACTERS: {
-        KNIGHT: { name: "기사", hp: 120, mp: 0, move: [3, 4], skills: ["SLASH", "UPPER_SLASH", "GUARD", "SHIELD_THROW"], color: '#C0C0C0', desc: "공수 밸런스가 좋은 탱커 유닛." },
-        MAGE: { name: "마법사", hp: 100, mp: 100, move: [2, 3], skills: ["MAGIC_MISSILE", "FIREBALL", "INFERNITY"], color: '#9C27B0', desc: "강력한 마법으로 적을 제압하는 딜러." },
-        NINJA: { name: "닌자", hp: 85, mp: 0, move: [4, 5], skills: ["STEALTH", "BACKSTAB"], color: '#333333', desc: "은신과 기습에 특화된 암살자." },
-        BOW_MASTER: { name: "보우 마스터", hp: 90, mp: 0, move: [3, 4], skills: ["SNIPE", "HEADSHOT"], color: '#2E7D32', desc: "초장거리 저격에 특화된 궁수." },
-        PATHFINDER: { name: "패스파인더", hp: 95, mp: 0, move: [4, 6], skills: ["DAGGER_STAB", "AMBUSH_STRIKE"], color: '#FF6F00', desc: "이동 거리에 따라 위력이 변하는 정찰병." }
+        KNIGHT: { name: "기사", hp: 120, mp: 0, move: [3, 4], skills: ["SLASH", "UPPER_SLASH", "GUARD", "SHIELD_THROW"], color: '#C0C0C0', art: 'knight_art', desc: "공수 밸런스가 좋은 탱커 유닛." },
+        MAGE: { name: "마법사", hp: 100, mp: 100, move: [2, 3], skills: ["MAGIC_MISSILE", "FIREBALL", "INFERNITY"], color: '#9C27B0', art: 'mage_art', desc: "마법으로 적을 제압하는 딜러." },
+        NINJA: { name: "닌자", hp: 85, mp: 0, move: [4, 5], skills: ["STEALTH", "BACKSTAB"], color: '#333333', art: 'ninja_art', desc: "은신과 기습에 특화된 암살자." },
+        BOW_MASTER: { name: "보우 마스터", hp: 90, mp: 0, move: [3, 4], skills: ["SNIPE", "HEADSHOT"], color: '#2E7D32', art: 'archer_art', desc: "초장거리 저격에 특화된 궁수." },
+        PATHFINDER: { name: "패스파인더", hp: 95, mp: 0, move: [4, 6], skills: ["DAGGER_STAB", "AMBUSH_STRIKE"], color: '#FF6F00', art: 'pathfinder_art', desc: "이동 거리에 따라 위력이 변하는 정찰병." }
     }
 };
 
@@ -76,7 +71,7 @@ let reservedX; let reservedY; let selectedSkill; let moveHighlights = [];
 const STATE = { IDLE: 0, MOVE_SELECT: 1, ACTION_WAIT: 2, TARGET_SELECT: 3, BUSY: 4 };
 
 // ==========================================
-// [Part 2] 매칭 및 캐릭터 선택 로직 (중복 제거)
+// [Part 2] 매칭 및 캐릭터 선택 로직
 // ==========================================
 document.getElementById('find-match-btn').onclick = () => {
     if (!window.db) return;
@@ -107,13 +102,15 @@ function onMatchFound() {
     lobbyScreen.style.display = 'none';
     charSelectScreen.style.display = 'flex';
     const grid = document.getElementById('char-grid');
-    grid.innerHTML = '';
+    grid.innerHTML = ''; 
     Object.keys(DB.CHARACTERS).forEach(k => {
         const c = DB.CHARACTERS[k];
         const btn = document.createElement('div');
-        btn.innerText = c.name; btn.style.cssText = `width:90px; height:50px; background:${c.color}; border:2px solid #fff; cursor:pointer; color:white; font-weight:bold; display:flex; align-items:center; justify-content:center;`;
-        btn.onmouseenter = () => infoBox.innerText = c.desc;
+        btn.innerText = c.name; btn.style.cssText = `width:100px; height:50px; background:${c.color}; border:2px solid #fff; cursor:pointer; color:white; font-weight:bold; display:flex; align-items:center; justify-content:center;`;
+        btn.onmouseenter = () => { if(infoBox) infoBox.innerText = c.desc; };
         btn.onclick = () => {
+            Array.from(grid.children).forEach(b => b.style.border = "2px solid #fff");
+            btn.style.border = "4px solid yellow";
             selectedCharKey = k;
             window.dbUpdate(window.dbRef(window.db, `rooms/${currentRoomId}`), { [`${myRole}Char`]: k });
             document.getElementById('lock-in-btn').disabled = false;
@@ -125,21 +122,25 @@ function onMatchFound() {
 document.getElementById('lock-in-btn').onclick = () => {
     window.dbUpdate(window.dbRef(window.db, `rooms/${currentRoomId}`), { [`${myRole}Ready`]: true });
     document.getElementById('lock-in-btn').disabled = true;
+    document.getElementById('lock-in-btn').innerText = "준비 완료";
 };
 
-// 매칭 감시 및 게임 시작
-setTimeout(() => {
-    window.dbOnValue(window.dbRef(window.db, `rooms/${currentRoomId}`), (snap) => {
-        const d = snap.val(); if (!d) return;
-        if (d.hostReady && d.guestReady && d.status !== 'playing') {
-            window.selectedChars = { host: d.hostChar, guest: d.guestChar };
-            mapData = d.map;
-            if (myRole === 'host') window.dbUpdate(window.dbRef(window.db, `rooms/${currentRoomId}`), { status: 'playing' });
-            charSelectScreen.style.display = 'none'; gameContainer.style.display = 'block';
-            if (!game) game = new Phaser.Game(config);
-        }
-    });
-}, 1000);
+// 실시간 데이터 감시 및 시작
+window.addEventListener('load', () => {
+    setInterval(() => {
+        if (!currentRoomId) return;
+        window.dbGet(window.dbRef(window.db, `rooms/${currentRoomId}`)).then((snap) => {
+            const d = snap.val(); if (!d) return;
+            if (d.hostReady && d.guestReady && d.status !== 'playing') {
+                window.selectedChars = { host: d.hostChar, guest: d.guestChar };
+                mapData = d.map;
+                if (myRole === 'host') window.dbUpdate(window.dbRef(window.db, `rooms/${currentRoomId}`), { status: 'playing' });
+                charSelectScreen.style.display = 'none'; gameContainer.style.display = 'block';
+                if (!game) game = new Phaser.Game(config);
+            }
+        });
+    }, 1000);
+});
 
 // ==========================================
 // [Part 3] 전투 시스템 (Phaser)
@@ -151,7 +152,8 @@ class Unit {
         this.skills = data.skills.map(k => ({...DB.SKILLS[k], id: k}));
         this.moveRange = data.move; this.cooldowns = {}; this.isReAction = false;
         const pos = gridToWorld(x, y);
-        this.sprite = scene.add.rectangle(pos.x, pos.y, 35, 35, Phaser.Display.Color.HexStringToColor(data.color).color).setStrokeStyle(2, 0xffffff);
+        this.sprite = scene.add.sprite(pos.x, pos.y, data.art).setScale(1.5);
+        if (!isMe) this.sprite.setTint(0xff8888);
         this.hpText = scene.add.text(pos.x, pos.y - 35, `${this.hp}/${this.maxHp}`, { fontSize: '14px', fontStyle: 'bold' }).setOrigin(0.5);
     }
     updatePos(gx, gy) {
@@ -163,8 +165,30 @@ class Unit {
 
 const config = {
     type: Phaser.AUTO, parent: 'game-container', width: 800, height: 600,
-    backgroundColor: '#1a1a1a', scene: { create: create }
+    backgroundColor: '#1a1a1a', scene: { preload: preload, create: create }
 };
+
+function preload() {
+    const createArt = (key, colors, pixels) => {
+        const canvas = this.textures.createCanvas(key, 32, 32);
+        const ctx = canvas.context;
+        const size = 32 / pixels.length;
+        for(let y=0; y<pixels.length; y++) {
+            for(let x=0; x<pixels[y].length; x++) {
+                if(pixels[y][x] !== ' ') {
+                    ctx.fillStyle = colors[pixels[y][x]];
+                    ctx.fillRect(x*size, y*size, size, size);
+                }
+            }
+        }
+        canvas.refresh();
+    };
+    createArt('knight_art', {'s':'#C0C0C0','f':'#FFCC99','r':'#FF0000','b':'#4169E1'}, ["  ssss  "," ssrrss "," ssssss ","  ffff  ","  bbbb  "," ggssgg ","  s  s  "]);
+    createArt('mage_art', {'p':'#800080','f':'#FFCC99','y':'#FFD700'}, ["  pppp  "," pppppp ","  ffff  ","  pppp  "," yppppppy","  p  p  "]);
+    createArt('ninja_art', {'k':'#1a1a1a','r':'#8b0000','s':'#fff'}, ["  kkkk  "," kkkkkk "," kskksk ","  ffff  ","  kkkk  "," krrkkr ","  k  k  "]);
+    createArt('archer_art', {'g':'#2E7D32','b':'#8B4513','f':'#FFCC99'}, ["  gggg  "," ggggb b","  ffff  ","  gggg  "," bgggggb","  g  g  "]);
+    createArt('pathfinder_art', {'o':'#FF6F00','b':'#444','f':'#FFCC99'}, ["  oooo  "," oooooo ","  ffff  ","  bbbb  "," obbbbo ","  b  b  "]);
+}
 
 function create() {
     const sX = (800 - (mapWidth * gridSize)) / 2; const sY = (600 - (mapHeight * gridSize)) / 2;
