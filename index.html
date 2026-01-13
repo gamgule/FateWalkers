@@ -17,105 +17,59 @@
             justify-content: center;
             min-height: 100vh;
             overflow: hidden;
-            user-select: none; /* 드래그 방지 */
+            user-select: none;
         }
 
-        /* 로비 화면 */
-        #lobby-screen {
+        #lobby-screen, #char-select-screen {
             text-align: center;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.7);
             padding: 40px;
             border-radius: 15px;
             box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        #char-select-screen { display: none; max-width: 900px; }
+        
         h1 {
-            font-size: 3rem;
-            margin-bottom: 20px;
+            font-size: 3rem; margin-bottom: 20px;
             background: linear-gradient(to right, #00c6ff, #0072ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 10px rgba(0, 198, 255, 0.5);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
-        #find-match-btn {
-            padding: 15px 50px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: white;
-            background: linear-gradient(45deg, #ff416c, #ff4b2b);
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 4px 15px rgba(255, 75, 43, 0.4);
+        button {
+            padding: 15px 40px; font-size: 1.2rem; font-weight: bold; color: white;
+            border: none; border-radius: 50px; cursor: pointer; margin-top: 20px;
+            transition: 0.2s;
         }
+        #find-match-btn { background: linear-gradient(45deg, #ff416c, #ff4b2b); }
         #find-match-btn:hover { transform: scale(1.05); }
-        #find-match-btn:disabled { background: #555; cursor: not-allowed; }
+        #lock-in-btn { background: #0072ff; }
+        #lock-in-btn:disabled { background: #555; cursor: not-allowed; }
 
-        /* 캐릭터 선택 화면 */
-        #char-select-screen {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.85);
-            padding: 30px;
-            border-radius: 15px;
-            border: 1px solid #444;
-            max-width: 800px;
-        }
-
-        #char-grid { display: flex; gap: 15px; margin: 20px; flex-wrap: wrap; justify-content: center; }
-
-        /* 캐릭터 설명 박스 (선택창용) */
+        #char-grid { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 20px 0; }
+        
         #char-info-box {
             background: rgba(20, 20, 20, 0.9);
             border: 1px solid #00c6ff;
-            color: #e0e0e0;
-            padding: 20px;
-            width: 100%;
-            text-align: center;
-            border-radius: 8px;
-            min-height: 60px;
-            margin-top: 10px;
-            font-size: 1.1rem;
-            box-sizing: border-box;
-            white-space: pre-line; /* 줄바꿈 허용 */
+            color: #ddd; padding: 15px; border-radius: 8px;
+            min-height: 80px; width: 100%; box-sizing: border-box;
+            white-space: pre-line;
         }
 
-        #lock-in-btn {
-            margin-top: 20px;
-            padding: 10px 40px;
-            font-size: 1.2rem;
-            background: #0072ff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        #lock-in-btn:disabled { background: #444; }
-
-        /* 게임 컨테이너 */
-        #game-container {
-            display: none;
-            border: 4px solid #333;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
-            border-radius: 4px;
-            position: relative;
-        }
+        #game-container { display: none; border: 4px solid #333; box-shadow: 0 0 30px black; }
     </style>
 </head>
 <body>
 
     <div id="lobby-screen">
         <h1>Fate Walkers</h1>
-        <p style="color:#aaa; margin-bottom: 30px;">Turn-Based Strategy PVP</p>
+        <p>Turn-Based Strategy PVP</p>
         <button id="find-match-btn">매칭 시작</button>
     </div>
 
     <div id="char-select-screen">
-        <h2 style="margin:0; color:#fff;">출전할 영웅 선택</h2>
+        <h2>영웅 선택</h2>
         <div id="char-grid"></div>
         <div id="char-info-box">캐릭터에 마우스를 올리면 정보가 표시됩니다.</div>
         <button id="lock-in-btn" disabled>선택 완료</button>
@@ -124,12 +78,15 @@
     <div id="game-container"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getDatabase, ref, get, set, update, push, onValue } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
 
-        // ★★★ 본인의 파이어베이스 키를 입력하세요 ★★★
-const firebaseConfig = {
+        // =========================================================
+        // ★★★ 여기에 본인의 파이어베이스 키를 꼭 입력하세요! ★★★
+        // =========================================================
+        const firebaseConfig = {
   apiKey: "AIzaSyCMtMnUbfeeLTSFZJuRhDkv5xoCi2ioS6M",
   authDomain: "fatewalkers-29335.firebaseapp.com",
   databaseURL: "https://fatewalkers-29335-default-rtdb.firebaseio.com",
@@ -139,13 +96,451 @@ const firebaseConfig = {
   appId: "1:343677807456:web:c2b4a7bde3b9284b5c8c05",
   measurementId: "G-RVRS4BGZD1"
 };
+
+        // Firebase 초기화
         const app = initializeApp(firebaseConfig);
-        window.db = getDatabase(app);
-        window.dbRef = ref; window.dbGet = get; window.dbSet = set;
-        window.dbUpdate = update; window.dbPush = push; window.dbOnValue = onValue;
+        const db = getDatabase(app);
+
+        // ==========================================
+        // [데이터] 캐릭터 및 스킬 (사용자 설정 완벽 반영)
+        // ==========================================
+        const DB = {
+            SKILLS: {
+                // [기사]
+                SLASH: { name: "베기", power: 25, range: 3, cooldown: 0, cost: 0, desc: "사거리 3칸, 데미지 25" },
+                UPPER_SLASH: { name: "상단 베기", power: 50, range: 2, cooldown: 3, cost: 0, desc: "강력한 일격 (쿨타임 3)" },
+                GUARD: { name: "가드", type: "buff", cooldown: 2, reduction: 0.3, cost: 0, desc: "다음 피해 30% 경감" },
+                SHIELD_THROW: { name: "방패 던지기", power: 10, range: 4, triggerReAction: true, isUltimate: true, cost: 0, desc: "[궁극기] 1회용. 사용 후 재행동." },
+                
+                // [마법사]
+                MAGIC_MISSILE: { name: "매직미사일", power: 20, range: 5, cost: 10, cooldown: 0, desc: "MP 10 소모" },
+                FIREBALL: { name: "파이어볼", power: 30, range: 5, cost: 20, cooldown: 2, desc: "화염구 (MP 20)" },
+                ICE_SPEAR: { name: "아이스 스피어", power: 35, range: 4, cost: 20, cooldown: 2, desc: "얼음창 (MP 20)" },
+                INFERNITY: { name: "인페르니티", power: 110, range: 8, cost: 100, cooldown: 5, isUltimate: true, disablePassive: 1, desc: "[궁극기] MP 100, 패시브 봉인" },
+
+                // [닌자]
+                DIAGONAL_SLASH: { name: "사선베기", power: 25, range: 2, cooldown: 0, cost: 0, extraMove: 3, desc: "공격 후 3칸 이동" },
+                STEALTH: { name: "은신", type: "buff", range: 0, cooldown: 4, cost: 0, triggerReAction: true, effect: "stealth", desc: "은신(이동+1) & 재행동" },
+                KUNAI_THROW: { name: "쿠나이 던지기", power: 25, range: 4, cooldown: 0, cost: 0, extraMove: 3, desc: "원거리 견제" },
+                BACKSTAB: { name: "배후노리기", power: 60, range: 6, cooldown: 0, cost: 0, isUltimate: true, reqStealth: true, teleportBehind: true, extraMove: 1, desc: "[궁극기] 은신 필수. 적 배후 이동" },
+
+                // [보우 마스터]
+                SNIPE: { name: "저격", power: 20, range: 6, minRange: 4, cooldown: 0, cost: 0, desc: "사거리 4-6. 조준 시 강화" },
+                AIM: { name: "조준", type: "buff", range: 0, cooldown: 0, cost: 0, triggerReAction: true, effect: "aim", desc: "이동불가, 저격 강화, 재행동" },
+                BACKSTEP: { name: "백스텝", power: 0, range: 0, cooldown: 2, cost: 0, triggerReAction: true, effect: "backstep", desc: "뒤로 2칸 이동 & 재행동" },
+                HEADSHOT: { name: "헤드샷", power: 70, range: 7, minRange: 5, cooldown: 6, cost: 0, isUltimate: true, chargeTurn: 1, desc: "[궁극기] 1턴 차징 후 발사" },
+
+                // [패스파인더]
+                DAGGER_STAB: { name: "단검 찌르기", power: 20, range: 2, cooldown: 0, cost: 0, desc: "기본 공격" },
+                PATH_DETECT: { name: "경로 탐지", type: "buff", range: 0, cooldown: 2, cost: 0, effect: "path_detect", desc: "3배수:기습3배 / 2배수:단검+10" },
+                PATH_SET: { name: "경로 설정", type: "buff", range: 0, cooldown: 4, cost: 0, triggerReAction: true, effect: "path_set", desc: "거리10이상 시 이동+7 & 재행동" },
+                CROSSBOW_SURGE: { name: "석궁 쇄도", power: 0, range: 5, cooldown: 4, cost: 0, isUltimate: true, desc: "[궁극기] 기습(11칸)시 사용가능" }
+            },
+            PASSIVES: {
+                KNIGHT_SHIELD: { name: "기사의 방패", desc: "30%확률로 데미지 20% 경감" },
+                MANA_MASTER: { name: "마나의 주인", desc: "매 턴 MP 30 회복" },
+                STEALTH_ART: { name: "은신술", desc: "은신 시 이동력 +1" },
+                CRITICAL_HIT: { name: "크리티컬 히트", desc: "5% 확률로 1.5배 데미지" },
+                PATHFINDER_KIT: { name: "패스파인더 키트", desc: "기습(11칸이상 2배), 화살줍기(4칸당+1)" }
+            },
+            CHARACTERS: {
+                KNIGHT: { name: "기사", hp: 120, mp: 0, move: [3, 4], skills: ["SLASH", "UPPER_SLASH", "GUARD", "SHIELD_THROW"], passive: "KNIGHT_SHIELD", color: '#C0C0C0' },
+                MAGE: { name: "마법사", hp: 100, mp: 100, move: [2, 4], skills: ["MAGIC_MISSILE", "FIREBALL", "ICE_SPEAR", "INFERNITY"], passive: "MANA_MASTER", color: '#9C27B0' },
+                NINJA: { name: "닌자", hp: 85, mp: 0, move: [4, 5], skills: ["DIAGONAL_SLASH", "STEALTH", "KUNAI_THROW", "BACKSTAB"], passive: "STEALTH_ART", color: '#333333' },
+                BOW_MASTER: { name: "보우 마스터", hp: 100, mp: 0, move: [3, 4], skills: ["SNIPE", "AIM", "BACKSTEP", "HEADSHOT"], passive: "CRITICAL_HIT", color: '#228B22' },
+                PATHFINDER: { name: "패스파인더", hp: 70, mp: 0, move: [4, 7], skills: ["DAGGER_STAB", "PATH_DETECT", "PATH_SET", "CROSSBOW_SURGE"], passive: "PATHFINDER_KIT", color: '#FF4500' }
+            }
+        };
+
+        const PIXEL_DATA = {
+            knight: { colors: {'s':'#C0C0C0','f':'#FFCC99','r':'#FF0000','b':'#4169E1'}, data: ["  ssss  "," ssrrss "," ssssss ","  ffff  ","  bbbb  "," ggssgg ","  s  s  "] },
+            mage: { colors: {'p':'#800080','f':'#FFCC99','y':'#FFD700'}, data: ["  pppp  "," pppppp ","  ffff  ","  pppp  "," yppppppy","  p  p  "] },
+            ninja: { colors: {'k':'#1a1a1a','r':'#8b0000','s':'#fff'}, data: ["  kkkk  "," kkkkkk "," kskksk ","  ffff  ","  kkkk  "," krrkkr ","  k  k  "] },
+            bowmaster: { colors: {'g':'#2E7D32','b':'#8B4513','f':'#FFCC99'}, data: ["  gggg  "," ggggb b","  ffff  ","  gggg  "," bgggggb","  g  g  "] },
+            pathfinder: { colors: {'o':'#FF4500','b':'#444','f':'#FFCC99'}, data: ["  oooo  "," oooooo ","  ffff  ","  bbbb  "," obbbbo ","  b  b  "] }
+        };
+
+        // 전역 변수
+        let myRole = null; let currentRoomId = null; let isMyTurn = false;
+        let selectedCharKey = null; let game = null;
+        let playerUnit, enemyUnit, gameState = 0;
+        let reservedX, reservedY, selectedSkill, moveHighlights = [];
+        let mapData = [];
+        const mapWidth = 11, mapHeight = 7, gridSize = 60;
+        const STATE = { IDLE: 0, MOVE_SELECT: 1, ACTION_WAIT: 2, TARGET_SELECT: 3, BUSY: 4 };
+
+        // ==========================================
+        // [로직] 좌표 변환 (P1/P2 시점 고정)
+        // ==========================================
+        function toLocal(x, y) { return myRole === 'p2' ? { x: (mapWidth - 1) - x, y: (mapHeight - 1) - y } : { x: x, y: y }; }
+        function toServer(x, y) { return myRole === 'p2' ? { x: (mapWidth - 1) - x, y: (mapHeight - 1) - y } : { x: x, y: y }; }
+        function gridToWorld(lx, ly) {
+            const sX = (800 - (mapWidth * gridSize)) / 2;
+            const sY = (600 - (mapHeight * gridSize)) / 2 + 30; // HUD 공간 확보
+            return { x: sX + lx * gridSize + 30, y: sY + ly * gridSize + 30 };
+        }
+
+        // ==========================================
+        // [로직] 매칭 시스템
+        // ==========================================
+        document.getElementById('find-match-btn').onclick = () => {
+            const btn = document.getElementById('find-match-btn');
+            btn.disabled = true; btn.innerText = "매칭 중...";
+            
+            const roomsRef = ref(db, 'rooms');
+            get(roomsRef).then((snap) => {
+                const rooms = snap.val(); let found = null;
+                if (rooms) for (let id in rooms) if (rooms[id].status === 'waiting') { found = id; break; }
+                if (found) joinRoom(found); else createRoom();
+            }).catch(e => { alert("DB 연결 오류! API키를 확인하세요."); btn.disabled = false; });
+        };
+
+        function createRoom() {
+            const newRef = push(ref(db, 'rooms'));
+            currentRoomId = newRef.key; myRole = 'p1';
+            const map = generateMap();
+            set(newRef, { status: 'waiting', turn: 'p1', map: map, p1Ready: false, p2Ready: false });
+            onValue(newRef, (s) => { if (s.val()?.status === 'selecting') onMatchFound(); });
+        }
+
+        function joinRoom(id) {
+            currentRoomId = id; myRole = 'p2';
+            update(ref(db, `rooms/${id}`), { status: 'selecting' });
+            onMatchFound();
+        }
+
+        function onMatchFound() {
+            document.getElementById('lobby-screen').style.display = 'none';
+            document.getElementById('char-select-screen').style.display = 'flex';
+            renderCharSelect();
+        }
+
+        function renderCharSelect() {
+            const grid = document.getElementById('char-grid');
+            const info = document.getElementById('char-info-box');
+            
+            Object.keys(DB.CHARACTERS).forEach(k => {
+                const c = DB.CHARACTERS[k];
+                const artKey = k.toLowerCase().replace('master', 'master');
+                const iconData = PIXEL_DATA[artKey] || PIXEL_DATA['knight'];
+                const iconUrl = drawIcon(iconData.data, iconData.colors);
+
+                const el = document.createElement('div');
+                el.style.cssText = `width:100px; height:120px; background:${c.color}; border:2px solid #fff; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center;`;
+                el.innerHTML = `<img src="${iconUrl}" style="width:64px; height:64px; image-rendering:pixelated; margin-bottom:5px;"><b>${c.name}</b>`;
+                
+                el.onmouseenter = () => info.innerText = `[${c.name}]\n체력:${c.hp} / 이동:${c.move[0]}~${c.move[1]}\n패시브: ${DB.PASSIVES[c.passive].name}\n\n${DB.PASSIVES[c.passive].desc}`;
+                el.onclick = () => {
+                    Array.from(grid.children).forEach(b => b.style.border = "2px solid #fff");
+                    el.style.border = "4px solid yellow";
+                    selectedCharKey = k;
+                    update(ref(db, `rooms/${currentRoomId}`), { [`${myRole}Char`]: k });
+                    document.getElementById('lock-in-btn').disabled = false;
+                };
+                grid.appendChild(el);
+            });
+
+            document.getElementById('lock-in-btn').onclick = () => {
+                update(ref(db, `rooms/${currentRoomId}`), { [`${myRole}Ready`]: true });
+                document.getElementById('lock-in-btn').disabled = true;
+                document.getElementById('lock-in-btn').innerText = "대기 중...";
+            };
+        }
+
+        // 게임 시작 감시
+        setInterval(() => {
+            if (!currentRoomId) return;
+            get(ref(db, `rooms/${currentRoomId}`)).then((snap) => {
+                const d = snap.val(); if (!d) return;
+                if (d.p1Ready && d.p2Ready && d.status !== 'playing') {
+                    window.selectedChars = { p1: d.p1Char, p2: d.p2Char };
+                    mapData = d.map;
+                    if (myRole === 'p1') update(ref(db, `rooms/${currentRoomId}`), { status: 'playing' });
+                    
+                    document.getElementById('char-select-screen').style.display = 'none';
+                    document.getElementById('game-container').style.display = 'block';
+                    if (!game) game = new Phaser.Game(config);
+                }
+            });
+        }, 1500);
+
+        // ==========================================
+        // [로직] 게임 엔진 (Phaser)
+        // ==========================================
+        class Unit {
+            constructor(scene, data, lx, ly, isMe) {
+                this.scene = scene;
+                this.name = data.name; this.maxHp = data.hp; this.hp = data.hp; 
+                this.mp = 0; this.maxMp = data.mp || 0;
+                this.localX = lx; this.localY = ly; this.isMe = isMe;
+                this.prevX = lx; this.prevY = ly;
+                
+                this.skills = data.skills.map(k => ({...DB.SKILLS[k], id: k}));
+                this.passive = data.passive ? DB.PASSIVES[data.passive] : null;
+                this.moveRange = data.move; this.cooldowns = {}; 
+                
+                // 특수 상태
+                this.shieldThrowUsed = false; this.aimActive = false; 
+                this.moveBuffTurns = 0; this.hitCount = 0;
+                this.arrows = 0; this.movedDistance = 0; this.pathDetectActive = false;
+
+                const pos = gridToWorld(lx, ly);
+                let artKey = data.name === "보우 마스터" ? "bowmaster" : data.name.toLowerCase();
+                if(!PIXEL_DATA[artKey]) artKey = "knight";
+
+                this.sprite = scene.add.sprite(pos.x, pos.y, artKey + '_art').setScale(1.5).setInteractive();
+                if (!isMe) this.sprite.setTint(0xff8888);
+                this.hpText = scene.add.text(pos.x, pos.y - 35, `${this.hp}`, { fontSize: '14px', fontStyle: 'bold' }).setOrigin(0.5);
+
+                this.sprite.on('pointerdown', () => {
+                   scene.descText.setText(`[${this.name}]\nHP:${this.hp}/${this.maxHp} MP:${this.mp}\n상태: ${this.passive?.name || '없음'}`);
+                });
+            }
+
+            updatePos(lx, ly) {
+                const dist = Math.abs(this.localX - lx) + Math.abs(this.localY - ly);
+                if (this.isMe) this.movedDistance += dist;
+                this.localX = lx; this.localY = ly;
+                const pos = gridToWorld(lx, ly);
+                this.sprite.x = pos.x; this.sprite.y = pos.y;
+                this.hpText.x = pos.x; this.hpText.y = pos.y - 35;
+            }
+            savePos() { this.prevX = this.localX; this.prevY = this.localY; }
+            revertPos() { this.updatePos(this.prevX, this.prevY); }
+            takeDamage(d) { this.hp -= d; this.hpText.setText(`${this.hp}`); return this.hp <= 0; }
+        }
+
+        const config = {
+            type: Phaser.AUTO, parent: 'game-container', width: 800, height: 600,
+            backgroundColor: '#1a1a1a',
+            scene: { preload: preload, create: create }
+        };
+
+        let hudTextP1, hudTextP2, actionMenu, highlights = [];
+
+        function preload() {
+            const createArt = (key, colors, pixels) => {
+                const canvas = this.textures.createCanvas(key, 32, 32);
+                const ctx = canvas.context;
+                const size = 32 / pixels.length;
+                for(let y=0; y<pixels.length; y++) for(let x=0; x<pixels[y].length; x++) {
+                    if(pixels[y][x] !== ' ') { ctx.fillStyle = colors[pixels[y][x]]; ctx.fillRect(x*size, y*size, size, size); }
+                }
+                canvas.refresh();
+            };
+            Object.keys(PIXEL_DATA).forEach(k => createArt(k+'_art', PIXEL_DATA[k].colors, PIXEL_DATA[k].data));
+        }
+
+        function create() {
+            // 맵 그리기
+            const sX = (800 - (mapWidth * gridSize)) / 2;
+            const sY = (600 - (mapHeight * gridSize)) / 2 + 30;
+
+            for (let x = 0; x < mapWidth; x++) {
+                visualGrid[x] = [];
+                for (let y = 0; y < mapHeight; y++) {
+                    const sPos = toServer(x, y);
+                    const type = mapData[sPos.x] ? mapData[sPos.x][sPos.y].type : 'Grass';
+                    let color = type === 'Water' ? 0x1a4a7a : type === 'Mountain' ? 0x4a4a4a : type === 'Sand' ? 0x8a7a4a : 0x3d5e3a;
+                    const tile = this.add.rectangle(sX + x*gridSize + 30, sY + y*gridSize + 30, 56, 56, color).setStrokeStyle(1, 0x000, 0.5).setInteractive();
+                    visualGrid[x][y] = tile;
+                    tile.on('pointerdown', () => onTileClick(x, y));
+                }
+            }
+
+            // 유닛 생성
+            const myK = myRole === 'p1' ? window.selectedChars.p1 : window.selectedChars.p2;
+            const enK = myRole === 'p1' ? window.selectedChars.p2 : window.selectedChars.p1;
+            playerUnit = new Unit(this, DB.CHARACTERS[myK], 5, 6, true);
+            enemyUnit = new Unit(this, DB.CHARACTERS[enK], 5, 0, false);
+
+            // UI 생성
+            this.add.rectangle(400, 25, 800, 50, 0x222222);
+            hudTextP1 = this.add.text(20, 15, "", { fontSize: '18px', fill: '#0f0' });
+            hudTextP2 = this.add.text(780, 15, "", { fontSize: '18px', fill: '#f00' }).setOrigin(1, 0);
+            
+            this.add.rectangle(400, 560, 780, 70, 0x000000, 0.8).setStrokeStyle(1, 0x555);
+            this.descText = this.add.text(400, 560, "대기 중...", { fontSize: '16px', align: 'center' }).setOrigin(0.5);
+
+            actionMenu = this.add.container(680, 100);
+            updateHUD();
+            setupSync();
+        }
+
+        function onTileClick(lx, ly) {
+            if (!isMyTurn || gameState === STATE.BUSY) return;
+
+            if (gameState === STATE.IDLE && lx === playerUnit.localX && ly === playerUnit.localY) {
+                playerUnit.savePos();
+                clearHighlights();
+                showMoveRange(lx, ly, Phaser.Math.Between(playerUnit.moveRange[0], playerUnit.moveRange[1]));
+                gameState = STATE.MOVE_SELECT;
+            } else if (gameState === STATE.MOVE_SELECT && isHighlighted(lx, ly)) {
+                reservedX = lx; reservedY = ly;
+                clearHighlights();
+                playerUnit.updatePos(lx, ly);
+                gameState = STATE.ACTION_WAIT;
+                openActionMenu();
+            } else if (gameState === STATE.TARGET_SELECT && isHighlighted(lx, ly)) {
+                if (lx === enemyUnit.localX && ly === enemyUnit.localY) executeAction(selectedSkill, enemyUnit);
+                else executeAction(selectedSkill, playerUnit);
+            }
+        }
+
+        function openActionMenu() {
+            actionMenu.removeAll(true);
+            const bg = playerUnit.scene.add.rectangle(60, 150, 140, 320, 0x111111, 0.9).setStrokeStyle(1, 0x888);
+            actionMenu.add(bg);
+
+            let y = 0;
+            playerUnit.skills.forEach(skill => {
+                const cd = playerUnit.cooldowns[skill.id] || 0;
+                const disabled = cd > 0;
+                
+                const btn = playerUnit.scene.add.rectangle(60, y, 120, 40, disabled ? 0x444 : 0x880000).setInteractive();
+                const txt = playerUnit.scene.add.text(60, y, skill.name + (cd?`(${cd})`:""), {fontSize:'14px'}).setOrigin(0.5);
+                
+                btn.on('pointerover', () => playerUnit.scene.descText.setText(`[${skill.name}]\n${skill.desc}`));
+                if (!disabled) btn.on('pointerdown', () => {
+                    selectedSkill = skill;
+                    if (skill.range > 0) {
+                        gameState = STATE.TARGET_SELECT; clearHighlights();
+                        showTargetRange(reservedX, reservedY, skill.range);
+                        actionMenu.removeAll(true);
+                    } else executeAction(skill, playerUnit);
+                });
+
+                actionMenu.add(btn); actionMenu.add(txt); y += 45;
+            });
+
+            const cancelBtn = playerUnit.scene.add.rectangle(60, y, 120, 40, 0x444).setInteractive();
+            const cancelTxt = playerUnit.scene.add.text(60, y, "이동 취소", {fontSize:'14px'}).setOrigin(0.5);
+            cancelBtn.on('pointerdown', () => {
+                playerUnit.revertPos();
+                gameState = STATE.IDLE;
+                actionMenu.removeAll(true);
+                clearHighlights();
+            });
+            actionMenu.add(cancelBtn); actionMenu.add(cancelTxt);
+        }
+
+        function executeAction(skill, target) {
+            gameState = STATE.BUSY; actionMenu.removeAll(true); clearHighlights();
+
+            if (skill.cost > 0) playerUnit.mp -= skill.cost;
+            if (skill.power > 0 && target) {
+                let dmg = skill.power;
+                if (playerUnit.name === "패스파인더" && playerUnit.movedDistance >= 11) dmg *= 2;
+                target.takeDamage(dmg);
+            }
+
+            updateHUD();
+
+            // ★★★ 재행동 (턴 유지) 로직 ★★★
+            if (skill.triggerReAction) {
+                // 턴 종료 효과(쿨감/회복) 강제 적용 후 내 턴 유지
+                endTurnEffects(playerUnit);
+                playerUnit.scene.descText.setText("재행동 발동! (쿨타임/MP 회복됨)");
+                
+                setTimeout(() => {
+                    gameState = STATE.IDLE;
+                    updateDB(false); // 턴 안 넘김
+                }, 800);
+            } else {
+                // 일반 행동: 턴 넘김
+                setTimeout(() => updateDB(true), 500);
+            }
+        }
+
+        function updateDB(endTurn) {
+            const sPos = toServer(playerUnit.localX, playerUnit.localY);
+            const updates = { [`${myRole}Unit`]: { x: sPos.x, y: sPos.y, hp: playerUnit.hp, mp: playerUnit.mp } };
+            if (endTurn) updates.turn = myRole === 'p1' ? 'p2' : 'p1';
+            update(ref(db, `rooms/${currentRoomId}`), updates);
+        }
+
+        function setupSync() {
+            onValue(ref(db, `rooms/${currentRoomId}`), (snap) => {
+                const d = snap.val(); if (!d) return;
+                
+                if (d.turn === myRole && !isMyTurn) {
+                    isMyTurn = true; gameState = STATE.IDLE; 
+                    endTurnEffects(playerUnit);
+                    playerUnit.scene.descText.setText("나의 턴!");
+                } else if (d.turn !== myRole) {
+                    isMyTurn = false;
+                    playerUnit.scene.descText.setText("상대방의 턴...");
+                }
+
+                const enemyRole = myRole === 'p1' ? 'p2' : 'p1';
+                const enD = d[`${enemyRole}Unit`];
+                if (enD) {
+                    const lPos = toLocal(enD.x, enD.y);
+                    enemyUnit.updatePos(lPos.x, lPos.y);
+                    enemyUnit.hp = enD.hp; enemyUnit.mp = enD.mp;
+                    enemyUnit.hpText.setText(`${enD.hp}`);
+                    updateHUD();
+                }
+            });
+        }
+
+        function endTurnEffects(u) {
+            for(let k in u.cooldowns) if(u.cooldowns[k]>0) u.cooldowns[k]--;
+            if(u.passive?.name==="마나의 주인") u.mp = Math.min(u.maxMp, u.mp+30);
+            u.movedDistance = 0;
+        }
+
+        function updateHUD() {
+            hudTextP1.setText(`[나] HP:${playerUnit.hp} MP:${playerUnit.mp}`);
+            hudTextP2.setText(`[적] HP:${enemyUnit.hp} MP:${enemyUnit.mp}`);
+        }
+
+        function showMoveRange(sx, sy, r) {
+            for (let x = 0; x < mapWidth; x++) for (let y = 0; y < mapHeight; y++) {
+                const d = Math.abs(x - sx) + Math.abs(y - sy);
+                const sPos = toServer(x, y);
+                const t = mapData[sPos.x] ? mapData[sPos.x][sPos.y].type : 'Grass';
+                const isEnemy = (x === enemyUnit.localX && y === enemyUnit.localY); // 겹침 방지
+                
+                if (t === 'Mountain' || t === 'Water' || d === 0 || d > r || isEnemy) continue;
+                
+                const p = gridToWorld(x, y);
+                const rect = playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0x0000ff, 0.3);
+                highlights.push({x, y, rect});
+            }
+        }
+
+        function showTargetRange(sx, sy, r) {
+            for (let x = 0; x < mapWidth; x++) for (let y = 0; y < mapHeight; y++) {
+                if (Math.abs(x - sx) + Math.abs(y - sy) <= r) {
+                    const p = gridToWorld(x, y);
+                    const rect = playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0xff0000, 0.4);
+                    highlights.push({x, y, rect});
+                }
+            }
+        }
+
+        function clearHighlights() { highlights.forEach(h => h.rect.destroy()); highlights = []; }
+        function drawIcon(pixels, colors) {
+            const c = document.createElement('canvas'); c.width=32; c.height=32; const ctx=c.getContext('2d');
+            const s=32/pixels.length;
+            pixels.forEach((row, y) => [...row].forEach((col, x) => {
+                if(col!==' ') { ctx.fillStyle=colors[col]; ctx.fillRect(x*s, y*s, s, s); }
+            }));
+            return c.toDataURL();
+        }
+        function generateMap() {
+            let m = [];
+            for(let x=0; x<mapWidth; x++) {
+                m[x] = [];
+                for(let y=0; y<mapHeight; y++) {
+                    let t = 'Grass';
+                    if(x!==5 && Math.random()<0.3) t=['Water','Mountain','Sand'][Math.floor(Math.random()*3)];
+                    m[x][y] = {type: t};
+                }
+            }
+            return m;
+        }
     </script>
-    <script src="./game.js"></script>
 </body>
 </html>
-
-
