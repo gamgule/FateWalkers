@@ -7,7 +7,7 @@
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
         body {
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); /* 배경 꾸밈 */
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
             color: white;
             font-family: 'Pretendard', sans-serif;
             margin: 0;
@@ -17,6 +17,7 @@
             justify-content: center;
             min-height: 100vh;
             overflow: hidden;
+            user-select: none; /* 드래그 방지 */
         }
 
         /* 로비 화면 */
@@ -50,35 +51,37 @@
             transition: transform 0.2s, box-shadow 0.2s;
             box-shadow: 0 4px 15px rgba(255, 75, 43, 0.4);
         }
-
-        #find-match-btn:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(255, 75, 43, 0.6); }
-        #find-match-btn:disabled { background: #555; cursor: not-allowed; box-shadow: none; }
+        #find-match-btn:hover { transform: scale(1.05); }
+        #find-match-btn:disabled { background: #555; cursor: not-allowed; }
 
         /* 캐릭터 선택 화면 */
         #char-select-screen {
             display: none;
             flex-direction: column;
             align-items: center;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             padding: 30px;
             border-radius: 15px;
             border: 1px solid #444;
+            max-width: 800px;
         }
 
         #char-grid { display: flex; gap: 15px; margin: 20px; flex-wrap: wrap; justify-content: center; }
 
-        /* 캐릭터 설명 박스 */
+        /* 캐릭터 설명 박스 (선택창용) */
         #char-info-box {
             background: rgba(20, 20, 20, 0.9);
             border: 1px solid #00c6ff;
             color: #e0e0e0;
-            padding: 15px;
-            width: 500px;
+            padding: 20px;
+            width: 100%;
             text-align: center;
             border-radius: 8px;
-            min-height: 40px;
+            min-height: 60px;
             margin-top: 10px;
             font-size: 1.1rem;
+            box-sizing: border-box;
+            white-space: pre-line; /* 줄바꿈 허용 */
         }
 
         #lock-in-btn {
@@ -99,6 +102,7 @@
             border: 4px solid #333;
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
             border-radius: 4px;
+            position: relative;
         }
     </style>
 </head>
@@ -113,7 +117,7 @@
     <div id="char-select-screen">
         <h2 style="margin:0; color:#fff;">출전할 영웅 선택</h2>
         <div id="char-grid"></div>
-        <div id="char-info-box">캐릭터를 선택하세요.</div>
+        <div id="char-info-box">캐릭터에 마우스를 올리면 정보가 표시됩니다.</div>
         <button id="lock-in-btn" disabled>선택 완료</button>
     </div>
 
@@ -124,8 +128,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getDatabase, ref, get, set, update, push, onValue } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
 
-        // ★★★ 여기에 본인의 파이어베이스 키를 입력하세요 ★★★const firebaseConfig = {
-const firebaseConfig = {
+        // ★★★ 본인의 파이어베이스 키를 입력하세요 ★★★
+firebaseConfig = {
   apiKey: "AIzaSyCMtMnUbfeeLTSFZJuRhDkv5xoCi2ioS6M",
   authDomain: "fatewalkers-29335.firebaseapp.com",
   databaseURL: "https://fatewalkers-29335-default-rtdb.firebaseio.com",
@@ -135,6 +139,7 @@ const firebaseConfig = {
   appId: "1:343677807456:web:c2b4a7bde3b9284b5c8c05",
   measurementId: "G-RVRS4BGZD1"
 };
+
         const app = initializeApp(firebaseConfig);
         window.db = getDatabase(app);
         window.dbRef = ref; window.dbGet = get; window.dbSet = set;
@@ -143,4 +148,3 @@ const firebaseConfig = {
     <script src="./game.js"></script>
 </body>
 </html>
-
