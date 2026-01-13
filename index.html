@@ -8,23 +8,15 @@
 
         body {
             background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            color: white;
-            font-family: 'Pretendard', sans-serif;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            overflow: hidden;
-            user-select: none;
+            color: white; font-family: 'Pretendard', sans-serif;
+            margin: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            min-height: 100vh; overflow: hidden; user-select: none;
         }
 
         #lobby-screen, #char-select-screen {
-            text-align: center;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 40px;
-            border-radius: 15px;
+            text-align: center; background: rgba(0, 0, 0, 0.7);
+            padding: 40px; border-radius: 15px;
             box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
@@ -50,11 +42,9 @@
         #char-grid { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 20px 0; }
         
         #char-info-box {
-            background: rgba(20, 20, 20, 0.9);
-            border: 1px solid #00c6ff;
+            background: rgba(20, 20, 20, 0.9); border: 1px solid #00c6ff;
             color: #ddd; padding: 15px; border-radius: 8px;
-            min-height: 80px; width: 100%; box-sizing: border-box;
-            white-space: pre-line;
+            min-height: 80px; width: 100%; box-sizing: border-box; white-space: pre-line;
         }
 
         #game-container { display: none; border: 4px solid #333; box-shadow: 0 0 30px black; }
@@ -78,7 +68,6 @@
     <div id="game-container"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
-    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getDatabase, ref, get, set, update, push, onValue } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
@@ -86,7 +75,7 @@
         // =========================================================
         // ★★★ 여기에 본인의 파이어베이스 키를 꼭 입력하세요! ★★★
         // =========================================================
-        const firebaseConfig = {
+       const firebaseConfig = {
   apiKey: "AIzaSyCMtMnUbfeeLTSFZJuRhDkv5xoCi2ioS6M",
   authDomain: "fatewalkers-29335.firebaseapp.com",
   databaseURL: "https://fatewalkers-29335-default-rtdb.firebaseio.com",
@@ -100,31 +89,25 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // ==========================================
         // [데이터]
-        // ==========================================
         const DB = {
             SKILLS: {
                 SLASH: { name: "베기", power: 25, range: 3, cooldown: 0, cost: 0, desc: "사거리 3칸, 데미지 25" },
                 UPPER_SLASH: { name: "상단 베기", power: 50, range: 2, cooldown: 3, cost: 0, desc: "강력한 일격 (쿨타임 3)" },
                 GUARD: { name: "가드", type: "buff", cooldown: 2, reduction: 0.3, cost: 0, desc: "다음 피해 30% 경감" },
                 SHIELD_THROW: { name: "방패 던지기", power: 10, range: 4, triggerReAction: true, isUltimate: true, cost: 0, desc: "[궁극기] 1회용. 사용 후 재행동." },
-                
                 MAGIC_MISSILE: { name: "매직미사일", power: 20, range: 5, cost: 10, cooldown: 0, desc: "MP 10 소모" },
                 FIREBALL: { name: "파이어볼", power: 30, range: 5, cost: 20, cooldown: 2, desc: "화염구 (MP 20)" },
                 ICE_SPEAR: { name: "아이스 스피어", power: 35, range: 4, cost: 20, cooldown: 2, desc: "얼음창 (MP 20)" },
                 INFERNITY: { name: "인페르니티", power: 110, range: 8, cost: 100, cooldown: 5, isUltimate: true, disablePassive: 1, desc: "[궁극기] MP 100, 패시브 봉인" },
-
                 DIAGONAL_SLASH: { name: "사선베기", power: 25, range: 2, cooldown: 0, cost: 0, extraMove: 3, desc: "공격 후 3칸 이동" },
                 STEALTH: { name: "은신", type: "buff", range: 0, cooldown: 4, cost: 0, triggerReAction: true, effect: "stealth", desc: "은신(이동+1) & 재행동" },
                 KUNAI_THROW: { name: "쿠나이 던지기", power: 25, range: 4, cooldown: 0, cost: 0, extraMove: 3, desc: "원거리 견제" },
                 BACKSTAB: { name: "배후노리기", power: 60, range: 6, cooldown: 0, cost: 0, isUltimate: true, reqStealth: true, teleportBehind: true, extraMove: 1, desc: "[궁극기] 은신 필수. 적 배후 이동" },
-
                 SNIPE: { name: "저격", power: 20, range: 6, minRange: 4, cooldown: 0, cost: 0, desc: "사거리 4-6. 조준 시 강화" },
                 AIM: { name: "조준", type: "buff", range: 0, cooldown: 0, cost: 0, triggerReAction: true, effect: "aim", desc: "이동불가, 저격 강화, 재행동" },
                 BACKSTEP: { name: "백스텝", power: 0, range: 0, cooldown: 2, cost: 0, triggerReAction: true, effect: "backstep", desc: "뒤로 2칸 이동 & 재행동" },
                 HEADSHOT: { name: "헤드샷", power: 70, range: 7, minRange: 5, cooldown: 6, cost: 0, isUltimate: true, chargeTurn: 1, desc: "[궁극기] 1턴 차징 후 발사" },
-
                 DAGGER_STAB: { name: "단검 찌르기", power: 20, range: 2, cooldown: 0, cost: 0, desc: "기본 공격" },
                 PATH_DETECT: { name: "경로 탐지", type: "buff", range: 0, cooldown: 2, cost: 0, effect: "path_detect", desc: "3배수:기습3배 / 2배수:단검+10" },
                 PATH_SET: { name: "경로 설정", type: "buff", range: 0, cooldown: 4, cost: 0, triggerReAction: true, effect: "path_set", desc: "거리10이상 시 이동+7 & 재행동" },
@@ -154,15 +137,13 @@
             pathfinder: { colors: {'o':'#FF4500','b':'#444','f':'#FFCC99'}, data: ["  oooo  "," oooooo ","  ffff  ","  bbbb  "," obbbbo ","  b  b  "] }
         };
 
+        // 전역 변수
         let myRole = null; let currentRoomId = null; let isMyTurn = false;
         let selectedCharKey = null; let game = null;
         let mapData = [];
         const mapWidth = 11, mapHeight = 7, gridSize = 60;
         const STATE = { IDLE: 0, MOVE_SELECT: 1, ACTION_WAIT: 2, TARGET_SELECT: 3, BUSY: 4 };
 
-        // ==========================================
-        // [로직] 좌표 및 매칭
-        // ==========================================
         function toLocal(x, y) { return myRole === 'p2' ? { x: (mapWidth - 1) - x, y: (mapHeight - 1) - y } : { x: x, y: y }; }
         function toServer(x, y) { return myRole === 'p2' ? { x: (mapWidth - 1) - x, y: (mapHeight - 1) - y } : { x: x, y: y }; }
         function gridToWorld(lx, ly) {
@@ -180,18 +161,27 @@
                 const rooms = snap.val(); let found = null;
                 if (rooms) for (let id in rooms) if (rooms[id].status === 'waiting') { found = id; break; }
                 if (found) joinRoom(found); else createRoom();
-            }).catch(e => { alert("DB 연결 오류!"); btn.disabled = false; btn.innerText = "매칭 시작"; });
+            }).catch(e => { 
+                alert("DB 연결 오류! F12 콘솔을 확인하세요."); 
+                console.error(e);
+                btn.disabled = false; btn.innerText = "매칭 시작"; 
+            });
         };
 
         function createRoom() {
+            console.log("Creating Room...");
             const newRef = push(ref(db, 'rooms'));
             currentRoomId = newRef.key; myRole = 'p1';
-            const map = generateMap();
+            const map = generateMap(); // 맵 생성
+            
+            console.log("Map Generated:", map); // 디버깅용 로그
+
             set(newRef, { status: 'waiting', turn: 'p1', map: map, p1Ready: false, p2Ready: false });
             onValue(newRef, (s) => { if (s.val()?.status === 'selecting') onMatchFound(); });
         }
 
         function joinRoom(id) {
+            console.log("Joining Room:", id);
             currentRoomId = id; myRole = 'p2';
             update(ref(db, `rooms/${id}`), { status: 'selecting' });
             onMatchFound();
@@ -200,14 +190,12 @@
         function onMatchFound() {
             document.getElementById('lobby-screen').style.display = 'none';
             document.getElementById('char-select-screen').style.display = 'flex';
-            // ★ 수정됨: 여기서 바로 그리지 않고 onValue로 데이터 변경될 때마다 그리는 방식이면 중복됨
-            // 따라서 1회성 호출로 처리하거나 render 내부에서 초기화해야 함
             renderCharSelect();
         }
 
         function renderCharSelect() {
             const grid = document.getElementById('char-grid');
-            grid.innerHTML = ''; // ★ 수정됨: 기존 버튼을 모두 지우고 새로 그림 (증식 방지)
+            grid.innerHTML = ''; // ★ 증식 방지 코드
             const info = document.getElementById('char-info-box');
             
             Object.keys(DB.CHARACTERS).forEach(k => {
@@ -232,7 +220,6 @@
             });
 
             const lockBtn = document.getElementById('lock-in-btn');
-            // 이벤트 리스너 중복 방지를 위해 기존 것 제거 후 재할당 (cloneNode 사용)
             const newLockBtn = lockBtn.cloneNode(true);
             lockBtn.parentNode.replaceChild(newLockBtn, lockBtn);
             
@@ -249,35 +236,38 @@
             get(ref(db, `rooms/${currentRoomId}`)).then((snap) => {
                 const d = snap.val(); if (!d) return;
                 
-                // ★ 수정됨: 맵 데이터가 확실히 있는지 체크
+                // ★ 맵 데이터가 존재하는지 안전 체크
                 if (d.p1Ready && d.p2Ready && d.status !== 'playing') {
                     if (d.map) {
+                        console.log("Both Ready. Starting Game with Map:", d.map);
                         window.selectedChars = { p1: d.p1Char, p2: d.p2Char };
                         mapData = d.map;
                         if (myRole === 'p1') update(ref(db, `rooms/${currentRoomId}`), { status: 'playing' });
-                        
-                        document.getElementById('char-select-screen').style.display = 'none';
-                        document.getElementById('game-container').style.display = 'block';
-                        if (!game) game = new Phaser.Game(config);
+                        startGame();
+                    } else {
+                        console.warn("Waiting for Map data...");
                     }
                 } 
-                // 이미 게임 중인 경우 (새로고침 등 방지용, 혹은 P2 늦게 진입)
                 else if (d.status === 'playing' && !game) {
                      if (d.map) {
+                        console.log("Rejoining/Starting Game with Map:", d.map);
                         window.selectedChars = { p1: d.p1Char, p2: d.p2Char };
                         mapData = d.map;
-                        document.getElementById('lobby-screen').style.display = 'none';
-                        document.getElementById('char-select-screen').style.display = 'none';
-                        document.getElementById('game-container').style.display = 'block';
-                        game = new Phaser.Game(config);
+                        startGame();
                      }
                 }
             });
         }, 1500);
 
-        // ==========================================
-        // [로직] 게임 엔진 (Phaser)
-        // ==========================================
+        function startGame() {
+            if(game) return;
+            document.getElementById('lobby-screen').style.display = 'none';
+            document.getElementById('char-select-screen').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            game = new Phaser.Game(config);
+        }
+
+        // Phaser
         class Unit {
             constructor(scene, data, lx, ly, isMe) {
                 this.scene = scene;
@@ -342,23 +332,26 @@
         }
 
         function create() {
-            // ★ 수정됨: 맵 데이터가 없으면 렌더링 중단
-            if (!mapData || mapData.length === 0) { console.error("Map Data Missing!"); return; }
+            // ★ 안전장치: 맵 데이터가 없으면 중단
+            if (!mapData || mapData.length === 0) { 
+                console.error("Map Data is missing in Phaser Create!"); 
+                this.add.text(400, 300, "맵 로딩 실패. 새로고침 해주세요.", {fontSize: '20px'}).setOrigin(0.5);
+                return; 
+            }
 
             const sX = (800 - (mapWidth * gridSize)) / 2;
             const sY = (600 - (mapHeight * gridSize)) / 2 + 30;
 
             for (let x = 0; x < mapWidth; x++) {
-                visualGrid[x] = [];
+                // visualGrid[x] = []; // 필요시 사용
                 for (let y = 0; y < mapHeight; y++) {
                     const sPos = toServer(x, y);
-                    // ★ 수정됨: 맵 데이터 인덱스 안전 접근
-                    const cell = mapData[sPos.x] ? mapData[sPos.x][sPos.y] : null;
+                    // ★ 맵 데이터 안전 접근
+                    const cell = (mapData[sPos.x]) ? mapData[sPos.x][sPos.y] : null;
                     const type = cell ? cell.type : 'Grass';
                     
                     let color = type === 'Water' ? 0x1a4a7a : type === 'Mountain' ? 0x4a4a4a : type === 'Sand' ? 0x8a7a4a : 0x3d5e3a;
                     const tile = this.add.rectangle(sX + x*gridSize + 30, sY + y*gridSize + 30, 56, 56, color).setStrokeStyle(1, 0x000, 0.5).setInteractive();
-                    visualGrid[x][y] = tile;
                     tile.on('pointerdown', () => onTileClick(x, y));
                 }
             }
@@ -366,7 +359,6 @@
             const myK = myRole === 'p1' ? window.selectedChars.p1 : window.selectedChars.p2;
             const enK = myRole === 'p1' ? window.selectedChars.p2 : window.selectedChars.p1;
             
-            // 내 캐릭터는 항상 (5, 6)에서 시작 (로컬 기준)
             playerUnit = new Unit(this, DB.CHARACTERS[myK], 5, 6, true);
             enemyUnit = new Unit(this, DB.CHARACTERS[enK], 5, 0, false);
 
@@ -508,8 +500,12 @@
             for (let x = 0; x < mapWidth; x++) for (let y = 0; y < mapHeight; y++) {
                 const d = Math.abs(x - sx) + Math.abs(y - sy);
                 const sPos = toServer(x, y);
-                const t = mapData[sPos.x] ? mapData[sPos.x][sPos.y].type : 'Grass';
-                const isEnemy = (x === enemyUnit.localX && y === enemyUnit.localY);
+                // ★ 맵 데이터 안전 접근 (mapData[sPos.x] 체크)
+                const cell = mapData[sPos.x] ? mapData[sPos.x][sPos.y] : null;
+                const t = cell ? cell.type : 'Grass';
+                
+                const isEnemy = (x === enemyUnit.localX && y === enemyUnit.localY); 
+                
                 if (t === 'Mountain' || t === 'Water' || d === 0 || d > r || isEnemy) continue;
                 
                 const p = gridToWorld(x, y);
