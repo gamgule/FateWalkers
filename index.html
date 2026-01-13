@@ -129,7 +129,7 @@
         import { getDatabase, ref, get, set, update, push, onValue } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
 
         // ★★★ 본인의 파이어베이스 키를 입력하세요 ★★★
-firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyCMtMnUbfeeLTSFZJuRhDkv5xoCi2ioS6M",
   authDomain: "fatewalkers-29335.firebaseapp.com",
   databaseURL: "https://fatewalkers-29335-default-rtdb.firebaseio.com",
@@ -139,7 +139,6 @@ firebaseConfig = {
   appId: "1:343677807456:web:c2b4a7bde3b9284b5c8c05",
   measurementId: "G-RVRS4BGZD1"
 };
-
         const app = initializeApp(firebaseConfig);
         window.db = getDatabase(app);
         window.dbRef = ref; window.dbGet = get; window.dbSet = set;
@@ -148,3 +147,4 @@ firebaseConfig = {
     <script src="./game.js"></script>
 </body>
 </html>
+
