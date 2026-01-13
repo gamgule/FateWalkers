@@ -42,15 +42,11 @@
 
         #char-grid { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin: 20px 0; }
         
-        /* 캐릭터 설명창 디자인 개선 */
         #char-info-box {
             background: rgba(30, 30, 30, 0.95); border: 2px solid #00c6ff;
             color: #eee; padding: 20px; border-radius: 10px;
-            min-height: 200px; /* 높이 확보 */
-            width: 100%; box-sizing: border-box; 
-            text-align: left; /* 텍스트 왼쪽 정렬 */
-            font-size: 1rem;
-            line-height: 1.6;
+            min-height: 200px; width: 100%; box-sizing: border-box; 
+            text-align: left; font-size: 1rem; line-height: 1.6;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
         }
         
@@ -61,7 +57,6 @@
         .skill-name { color: #ffd700; font-weight: bold; }
         .passive-item { color: #00ff00; font-weight: bold; margin-top: 10px; }
 
-        /* 게임 컨테이너 */
         #game-container { 
             display: none; 
             border: 4px solid #333; 
@@ -97,24 +92,21 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
         import { getDatabase, ref, get, set, update, push, onValue } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
 
-        // =========================================================
-        // ★★★ 여기에 본인의 파이어베이스 키를 꼭 입력하세요! ★★★
-        // =========================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyCMtMnUbfeeLTSFZJuRhDkv5xoCi2ioS6M",
-  authDomain: "fatewalkers-29335.firebaseapp.com",
-  databaseURL: "https://fatewalkers-29335-default-rtdb.firebaseio.com",
-  projectId: "fatewalkers-29335",
-  storageBucket: "fatewalkers-29335.firebasestorage.app",
-  messagingSenderId: "343677807456",
-  appId: "1:343677807456:web:c2b4a7bde3b9284b5c8c05",
-  measurementId: "G-RVRS4BGZD1"
-};
+        // ★★★ Firebase Config ★★★
+        const firebaseConfig = {
+            apiKey: "본인_API_KEY",
+            authDomain: "본인_AUTH_DOMAIN",
+            databaseURL: "본인_DB_URL",
+            projectId: "본인_PROJECT_ID",
+            storageBucket: "본인_STORAGE_BUCKET",
+            messagingSenderId: "본인_SENDER_ID",
+            appId: "본인_APP_ID"
+        };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // [데이터] - 캐릭터 설명(desc) 강화
+        // [데이터]
         const DB = {
             SKILLS: {
                 SLASH: { name: "베기", power: 25, range: 3, cooldown: 0, cost: 0, desc: "사거리 3칸, 데미지 25" },
@@ -227,7 +219,6 @@ const firebaseConfig = {
                 el.style.cssText = `width:100px; height:120px; background:${c.color}; border:2px solid #fff; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow: 0 0 10px rgba(0,0,0,0.5);`;
                 el.innerHTML = `<img src="${iconUrl}" style="width:64px; height:64px; image-rendering:pixelated; margin-bottom:5px;"><b>${c.name}</b>`;
                 
-                // ★★★ 캐릭터 상세 정보 표시 로직 강화 ★★★
                 el.onmouseenter = () => {
                     let skillHtml = `<div class='skill-list'>`;
                     c.skills.forEach(sid => {
@@ -235,16 +226,13 @@ const firebaseConfig = {
                         skillHtml += `<div class='skill-item'><span class='skill-name'>${s.name}</span><br><span style='font-size:0.8rem; color:#bbb;'>${s.desc}</span></div>`;
                     });
                     skillHtml += `</div>`;
-                    
                     const passive = DB.PASSIVES[c.passive];
-                    
                     infoBox.innerHTML = `
                         <div class='info-title' style='color:${c.color}'>${c.name}</div>
                         <div class='info-desc'>${c.desc}</div>
                         <div><b>이동력:</b> ${c.move[0]}~${c.move[1]}칸 &nbsp;|&nbsp; <b>체력:</b> ${c.hp}</div>
                         <div class='passive-item'>[패시브] ${passive.name}: ${passive.desc}</div>
-                        <br><b>[보유 스킬]</b>
-                        ${skillHtml}
+                        <br><b>[보유 스킬]</b> ${skillHtml}
                     `;
                 };
 
@@ -324,13 +312,8 @@ const firebaseConfig = {
                 this.hpText = scene.add.text(pos.x, pos.y - 35, `${this.hp}`, { fontSize: '14px', fontStyle: 'bold' }).setOrigin(0.5);
 
                 this.sprite.on('pointerdown', () => {
-                    // 1. 정보 표시
                     scene.descText.setText(`[${this.name}]\nHP:${this.hp}/${this.maxHp} MP:${this.mp}\n상태: ${this.passive?.name || '없음'}`);
-                    
-                    // 2. 이동 모드 발동 (내 캐릭터 클릭 시)
-                    if(isMe && gameState === STATE.IDLE) {
-                        window.onTileClick(this.localX, this.localY);
-                    }
+                    if(isMe && gameState === STATE.IDLE) window.onTileClick(this.localX, this.localY);
                 });
             }
 
@@ -396,7 +379,6 @@ const firebaseConfig = {
             hudTextP1 = this.add.text(20, 15, "", { fontSize: '18px', fill: '#0f0' });
             hudTextP2 = this.add.text(780, 15, "", { fontSize: '18px', fill: '#f00' }).setOrigin(1, 0);
             
-            // 하단 설명창
             this.add.rectangle(400, 660, 780, 70, 0x000000, 0.8).setStrokeStyle(1, 0x555);
             this.descText = this.add.text(400, 660, "대기 중...", { fontSize: '16px', align: 'center' }).setOrigin(0.5);
 
@@ -406,6 +388,7 @@ const firebaseConfig = {
         }
 
         window.onTileClick = function(lx, ly) {
+            console.log("Tile/Highlight Clicked:", lx, ly, "State:", gameState);
             if (!isMyTurn || gameState === STATE.BUSY) return;
 
             if (gameState === STATE.IDLE && lx === playerUnit.localX && ly === playerUnit.localY) {
@@ -527,6 +510,7 @@ const firebaseConfig = {
             hudTextP2.setText(`[적] HP:${enemyUnit.hp} MP:${enemyUnit.mp}`);
         }
 
+        // ★★★ 핵심 수정: 이동 칸(Highlight)을 버튼화하여 클릭 보장 ★★★
         function showMoveRange(sx, sy, r) {
             for (let x = 0; x < mapWidth; x++) for (let y = 0; y < mapHeight; y++) {
                 const d = Math.abs(x - sx) + Math.abs(y - sy);
@@ -537,7 +521,9 @@ const firebaseConfig = {
                 if (t === 'Mountain' || t === 'Water' || d === 0 || d > r || isEnemy) continue;
                 
                 const p = gridToWorld(x, y);
-                const rect = playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0x0000ff, 0.3);
+                // 이동 칸 자체를 Interactive하게 만들어서 클릭 감지력을 높임
+                const rect = playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0x0000ff, 0.3).setInteractive();
+                rect.on('pointerdown', () => window.onTileClick(x, y)); 
                 highlights.push({x, y, rect});
             }
         }
@@ -546,7 +532,14 @@ const firebaseConfig = {
             for (let x = 0; x < mapWidth; x++) for (let y = 0; y < mapHeight; y++) {
                 if (Math.abs(x - sx) + Math.abs(y - sy) <= r) {
                     const p = gridToWorld(x, y);
-                    const rect = playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0xff0000, 0.4);
+                    const rect = playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0xff0000, 0.4).setInteractive();
+                    rect.on('pointerdown', () => {
+                        // 빨간색 타겟 칸 클릭 시에도 동작하도록
+                        if(gameState === STATE.TARGET_SELECT) {
+                            if (x === enemyUnit.localX && y === enemyUnit.localY) executeAction(selectedSkill, enemyUnit);
+                            else executeAction(selectedSkill, playerUnit);
+                        }
+                    });
                     highlights.push({x, y, rect});
                 }
             }
