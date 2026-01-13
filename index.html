@@ -97,40 +97,34 @@
   measurementId: "G-RVRS4BGZD1"
 };
 
-        // Firebase 초기화
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
         // ==========================================
-        // [데이터] 캐릭터 및 스킬 (사용자 설정 완벽 반영)
+        // [데이터]
         // ==========================================
         const DB = {
             SKILLS: {
-                // [기사]
                 SLASH: { name: "베기", power: 25, range: 3, cooldown: 0, cost: 0, desc: "사거리 3칸, 데미지 25" },
                 UPPER_SLASH: { name: "상단 베기", power: 50, range: 2, cooldown: 3, cost: 0, desc: "강력한 일격 (쿨타임 3)" },
                 GUARD: { name: "가드", type: "buff", cooldown: 2, reduction: 0.3, cost: 0, desc: "다음 피해 30% 경감" },
                 SHIELD_THROW: { name: "방패 던지기", power: 10, range: 4, triggerReAction: true, isUltimate: true, cost: 0, desc: "[궁극기] 1회용. 사용 후 재행동." },
                 
-                // [마법사]
                 MAGIC_MISSILE: { name: "매직미사일", power: 20, range: 5, cost: 10, cooldown: 0, desc: "MP 10 소모" },
                 FIREBALL: { name: "파이어볼", power: 30, range: 5, cost: 20, cooldown: 2, desc: "화염구 (MP 20)" },
                 ICE_SPEAR: { name: "아이스 스피어", power: 35, range: 4, cost: 20, cooldown: 2, desc: "얼음창 (MP 20)" },
                 INFERNITY: { name: "인페르니티", power: 110, range: 8, cost: 100, cooldown: 5, isUltimate: true, disablePassive: 1, desc: "[궁극기] MP 100, 패시브 봉인" },
 
-                // [닌자]
                 DIAGONAL_SLASH: { name: "사선베기", power: 25, range: 2, cooldown: 0, cost: 0, extraMove: 3, desc: "공격 후 3칸 이동" },
                 STEALTH: { name: "은신", type: "buff", range: 0, cooldown: 4, cost: 0, triggerReAction: true, effect: "stealth", desc: "은신(이동+1) & 재행동" },
                 KUNAI_THROW: { name: "쿠나이 던지기", power: 25, range: 4, cooldown: 0, cost: 0, extraMove: 3, desc: "원거리 견제" },
                 BACKSTAB: { name: "배후노리기", power: 60, range: 6, cooldown: 0, cost: 0, isUltimate: true, reqStealth: true, teleportBehind: true, extraMove: 1, desc: "[궁극기] 은신 필수. 적 배후 이동" },
 
-                // [보우 마스터]
                 SNIPE: { name: "저격", power: 20, range: 6, minRange: 4, cooldown: 0, cost: 0, desc: "사거리 4-6. 조준 시 강화" },
                 AIM: { name: "조준", type: "buff", range: 0, cooldown: 0, cost: 0, triggerReAction: true, effect: "aim", desc: "이동불가, 저격 강화, 재행동" },
                 BACKSTEP: { name: "백스텝", power: 0, range: 0, cooldown: 2, cost: 0, triggerReAction: true, effect: "backstep", desc: "뒤로 2칸 이동 & 재행동" },
                 HEADSHOT: { name: "헤드샷", power: 70, range: 7, minRange: 5, cooldown: 6, cost: 0, isUltimate: true, chargeTurn: 1, desc: "[궁극기] 1턴 차징 후 발사" },
 
-                // [패스파인더]
                 DAGGER_STAB: { name: "단검 찌르기", power: 20, range: 2, cooldown: 0, cost: 0, desc: "기본 공격" },
                 PATH_DETECT: { name: "경로 탐지", type: "buff", range: 0, cooldown: 2, cost: 0, effect: "path_detect", desc: "3배수:기습3배 / 2배수:단검+10" },
                 PATH_SET: { name: "경로 설정", type: "buff", range: 0, cooldown: 4, cost: 0, triggerReAction: true, effect: "path_set", desc: "거리10이상 시 이동+7 & 재행동" },
@@ -160,29 +154,23 @@
             pathfinder: { colors: {'o':'#FF4500','b':'#444','f':'#FFCC99'}, data: ["  oooo  "," oooooo ","  ffff  ","  bbbb  "," obbbbo ","  b  b  "] }
         };
 
-        // 전역 변수
         let myRole = null; let currentRoomId = null; let isMyTurn = false;
         let selectedCharKey = null; let game = null;
-        let playerUnit, enemyUnit, gameState = 0;
-        let reservedX, reservedY, selectedSkill, moveHighlights = [];
         let mapData = [];
         const mapWidth = 11, mapHeight = 7, gridSize = 60;
         const STATE = { IDLE: 0, MOVE_SELECT: 1, ACTION_WAIT: 2, TARGET_SELECT: 3, BUSY: 4 };
 
         // ==========================================
-        // [로직] 좌표 변환 (P1/P2 시점 고정)
+        // [로직] 좌표 및 매칭
         // ==========================================
         function toLocal(x, y) { return myRole === 'p2' ? { x: (mapWidth - 1) - x, y: (mapHeight - 1) - y } : { x: x, y: y }; }
         function toServer(x, y) { return myRole === 'p2' ? { x: (mapWidth - 1) - x, y: (mapHeight - 1) - y } : { x: x, y: y }; }
         function gridToWorld(lx, ly) {
             const sX = (800 - (mapWidth * gridSize)) / 2;
-            const sY = (600 - (mapHeight * gridSize)) / 2 + 30; // HUD 공간 확보
+            const sY = (600 - (mapHeight * gridSize)) / 2 + 30;
             return { x: sX + lx * gridSize + 30, y: sY + ly * gridSize + 30 };
         }
 
-        // ==========================================
-        // [로직] 매칭 시스템
-        // ==========================================
         document.getElementById('find-match-btn').onclick = () => {
             const btn = document.getElementById('find-match-btn');
             btn.disabled = true; btn.innerText = "매칭 중...";
@@ -192,7 +180,7 @@
                 const rooms = snap.val(); let found = null;
                 if (rooms) for (let id in rooms) if (rooms[id].status === 'waiting') { found = id; break; }
                 if (found) joinRoom(found); else createRoom();
-            }).catch(e => { alert("DB 연결 오류! API키를 확인하세요."); btn.disabled = false; });
+            }).catch(e => { alert("DB 연결 오류!"); btn.disabled = false; btn.innerText = "매칭 시작"; });
         };
 
         function createRoom() {
@@ -212,11 +200,14 @@
         function onMatchFound() {
             document.getElementById('lobby-screen').style.display = 'none';
             document.getElementById('char-select-screen').style.display = 'flex';
+            // ★ 수정됨: 여기서 바로 그리지 않고 onValue로 데이터 변경될 때마다 그리는 방식이면 중복됨
+            // 따라서 1회성 호출로 처리하거나 render 내부에서 초기화해야 함
             renderCharSelect();
         }
 
         function renderCharSelect() {
             const grid = document.getElementById('char-grid');
+            grid.innerHTML = ''; // ★ 수정됨: 기존 버튼을 모두 지우고 새로 그림 (증식 방지)
             const info = document.getElementById('char-info-box');
             
             Object.keys(DB.CHARACTERS).forEach(k => {
@@ -240,10 +231,15 @@
                 grid.appendChild(el);
             });
 
-            document.getElementById('lock-in-btn').onclick = () => {
+            const lockBtn = document.getElementById('lock-in-btn');
+            // 이벤트 리스너 중복 방지를 위해 기존 것 제거 후 재할당 (cloneNode 사용)
+            const newLockBtn = lockBtn.cloneNode(true);
+            lockBtn.parentNode.replaceChild(newLockBtn, lockBtn);
+            
+            newLockBtn.onclick = () => {
                 update(ref(db, `rooms/${currentRoomId}`), { [`${myRole}Ready`]: true });
-                document.getElementById('lock-in-btn').disabled = true;
-                document.getElementById('lock-in-btn').innerText = "대기 중...";
+                newLockBtn.disabled = true;
+                newLockBtn.innerText = "대기 중...";
             };
         }
 
@@ -252,14 +248,29 @@
             if (!currentRoomId) return;
             get(ref(db, `rooms/${currentRoomId}`)).then((snap) => {
                 const d = snap.val(); if (!d) return;
+                
+                // ★ 수정됨: 맵 데이터가 확실히 있는지 체크
                 if (d.p1Ready && d.p2Ready && d.status !== 'playing') {
-                    window.selectedChars = { p1: d.p1Char, p2: d.p2Char };
-                    mapData = d.map;
-                    if (myRole === 'p1') update(ref(db, `rooms/${currentRoomId}`), { status: 'playing' });
-                    
-                    document.getElementById('char-select-screen').style.display = 'none';
-                    document.getElementById('game-container').style.display = 'block';
-                    if (!game) game = new Phaser.Game(config);
+                    if (d.map) {
+                        window.selectedChars = { p1: d.p1Char, p2: d.p2Char };
+                        mapData = d.map;
+                        if (myRole === 'p1') update(ref(db, `rooms/${currentRoomId}`), { status: 'playing' });
+                        
+                        document.getElementById('char-select-screen').style.display = 'none';
+                        document.getElementById('game-container').style.display = 'block';
+                        if (!game) game = new Phaser.Game(config);
+                    }
+                } 
+                // 이미 게임 중인 경우 (새로고침 등 방지용, 혹은 P2 늦게 진입)
+                else if (d.status === 'playing' && !game) {
+                     if (d.map) {
+                        window.selectedChars = { p1: d.p1Char, p2: d.p2Char };
+                        mapData = d.map;
+                        document.getElementById('lobby-screen').style.display = 'none';
+                        document.getElementById('char-select-screen').style.display = 'none';
+                        document.getElementById('game-container').style.display = 'block';
+                        game = new Phaser.Game(config);
+                     }
                 }
             });
         }, 1500);
@@ -279,7 +290,6 @@
                 this.passive = data.passive ? DB.PASSIVES[data.passive] : null;
                 this.moveRange = data.move; this.cooldowns = {}; 
                 
-                // 특수 상태
                 this.shieldThrowUsed = false; this.aimActive = false; 
                 this.moveBuffTurns = 0; this.hitCount = 0;
                 this.arrows = 0; this.movedDistance = 0; this.pathDetectActive = false;
@@ -312,11 +322,11 @@
 
         const config = {
             type: Phaser.AUTO, parent: 'game-container', width: 800, height: 600,
-            backgroundColor: '#1a1a1a',
-            scene: { preload: preload, create: create }
+            backgroundColor: '#1a1a1a', scene: { preload: preload, create: create }
         };
 
         let hudTextP1, hudTextP2, actionMenu, highlights = [];
+        let playerUnit, enemyUnit;
 
         function preload() {
             const createArt = (key, colors, pixels) => {
@@ -332,7 +342,9 @@
         }
 
         function create() {
-            // 맵 그리기
+            // ★ 수정됨: 맵 데이터가 없으면 렌더링 중단
+            if (!mapData || mapData.length === 0) { console.error("Map Data Missing!"); return; }
+
             const sX = (800 - (mapWidth * gridSize)) / 2;
             const sY = (600 - (mapHeight * gridSize)) / 2 + 30;
 
@@ -340,7 +352,10 @@
                 visualGrid[x] = [];
                 for (let y = 0; y < mapHeight; y++) {
                     const sPos = toServer(x, y);
-                    const type = mapData[sPos.x] ? mapData[sPos.x][sPos.y].type : 'Grass';
+                    // ★ 수정됨: 맵 데이터 인덱스 안전 접근
+                    const cell = mapData[sPos.x] ? mapData[sPos.x][sPos.y] : null;
+                    const type = cell ? cell.type : 'Grass';
+                    
                     let color = type === 'Water' ? 0x1a4a7a : type === 'Mountain' ? 0x4a4a4a : type === 'Sand' ? 0x8a7a4a : 0x3d5e3a;
                     const tile = this.add.rectangle(sX + x*gridSize + 30, sY + y*gridSize + 30, 56, 56, color).setStrokeStyle(1, 0x000, 0.5).setInteractive();
                     visualGrid[x][y] = tile;
@@ -348,13 +363,13 @@
                 }
             }
 
-            // 유닛 생성
             const myK = myRole === 'p1' ? window.selectedChars.p1 : window.selectedChars.p2;
             const enK = myRole === 'p1' ? window.selectedChars.p2 : window.selectedChars.p1;
+            
+            // 내 캐릭터는 항상 (5, 6)에서 시작 (로컬 기준)
             playerUnit = new Unit(this, DB.CHARACTERS[myK], 5, 6, true);
             enemyUnit = new Unit(this, DB.CHARACTERS[enK], 5, 0, false);
 
-            // UI 생성
             this.add.rectangle(400, 25, 800, 50, 0x222222);
             hudTextP1 = this.add.text(20, 15, "", { fontSize: '18px', fill: '#0f0' });
             hudTextP2 = this.add.text(780, 15, "", { fontSize: '18px', fill: '#f00' }).setOrigin(1, 0);
@@ -436,18 +451,11 @@
 
             updateHUD();
 
-            // ★★★ 재행동 (턴 유지) 로직 ★★★
             if (skill.triggerReAction) {
-                // 턴 종료 효과(쿨감/회복) 강제 적용 후 내 턴 유지
                 endTurnEffects(playerUnit);
                 playerUnit.scene.descText.setText("재행동 발동! (쿨타임/MP 회복됨)");
-                
-                setTimeout(() => {
-                    gameState = STATE.IDLE;
-                    updateDB(false); // 턴 안 넘김
-                }, 800);
+                setTimeout(() => { gameState = STATE.IDLE; updateDB(false); }, 800);
             } else {
-                // 일반 행동: 턴 넘김
                 setTimeout(() => updateDB(true), 500);
             }
         }
@@ -491,6 +499,7 @@
         }
 
         function updateHUD() {
+            if(!playerUnit || !enemyUnit) return;
             hudTextP1.setText(`[나] HP:${playerUnit.hp} MP:${playerUnit.mp}`);
             hudTextP2.setText(`[적] HP:${enemyUnit.hp} MP:${enemyUnit.mp}`);
         }
@@ -500,8 +509,7 @@
                 const d = Math.abs(x - sx) + Math.abs(y - sy);
                 const sPos = toServer(x, y);
                 const t = mapData[sPos.x] ? mapData[sPos.x][sPos.y].type : 'Grass';
-                const isEnemy = (x === enemyUnit.localX && y === enemyUnit.localY); // 겹침 방지
-                
+                const isEnemy = (x === enemyUnit.localX && y === enemyUnit.localY);
                 if (t === 'Mountain' || t === 'Water' || d === 0 || d > r || isEnemy) continue;
                 
                 const p = gridToWorld(x, y);
