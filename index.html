@@ -14,15 +14,16 @@
             min-height: 100vh; overflow: hidden; user-select: none;
         }
 
+        /* 로비 & 캐릭터 선택창 */
         #lobby-screen, #char-select-screen {
-            text-align: center; background: rgba(0, 0, 0, 0.85);
+            text-align: center; background: rgba(0, 0, 0, 0.9);
             padding: 40px; border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            position: absolute; z-index: 10;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: absolute; z-index: 20;
         }
 
-        #char-select-screen { display: none; width: 900px; max-height: 90vh; overflow-y: auto; }
+        #char-select-screen { display: none; width: 900px; max-height: 95vh; overflow-y: auto; }
         
         h1 {
             font-size: 3rem; margin-bottom: 20px;
@@ -47,7 +48,6 @@
             color: #eee; padding: 20px; border-radius: 10px;
             min-height: 200px; width: 100%; box-sizing: border-box; 
             text-align: left; font-size: 1rem; line-height: 1.6;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
         }
         
         .info-title { font-size: 1.4rem; font-weight: bold; margin-bottom: 5px; color: #fff; }
@@ -57,12 +57,16 @@
         .skill-name { color: #ffd700; font-weight: bold; }
         .passive-item { color: #00ff00; font-weight: bold; margin-top: 10px; }
 
+        /* 게임 화면 크기 확보 */
         #game-container { 
             display: none; 
-            border: 4px solid #333; 
+            border: 4px solid #444; 
             box-shadow: 0 0 50px rgba(0,0,0,0.8); 
             border-radius: 10px;
             background-color: #1a1a1a;
+            /* 캔버스가 잘리지 않도록 크기 명시 */
+            width: 800px;
+            height: 800px; 
         }
     </style>
 </head>
@@ -95,7 +99,7 @@
         // =========================================================
         // ★★★ 여기에 본인의 파이어베이스 키를 꼭 입력하세요! ★★★
         // =========================================================
- const firebaseConfig = {
+        const firebaseConfig = {
   apiKey: "AIzaSyCMtMnUbfeeLTSFZJuRhDkv5xoCi2ioS6M",
   authDomain: "fatewalkers-29335.firebaseapp.com",
   databaseURL: "https://fatewalkers-29335-default-rtdb.firebaseio.com",
@@ -105,6 +109,7 @@
   appId: "1:343677807456:web:c2b4a7bde3b9284b5c8c05",
   measurementId: "G-RVRS4BGZD1"
 };
+
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
@@ -167,12 +172,24 @@
         const mapWidth = 11, mapHeight = 7, gridSize = 60;
         const STATE = { IDLE: 0, MOVE_SELECT: 1, ACTION_WAIT: 2, TARGET_SELECT: 3, BUSY: 4 };
 
+        // [좌표 변환] - 화면 중앙 정렬을 위한 Offset 계산
+        // 800x800 화면 기준 중앙
+        const screenW = 800; const screenH = 800;
+        const offsetX = (screenW - (mapWidth * gridSize)) / 2; // (800 - 660)/2 = 70
+        const offsetY = (screenH - (mapHeight * gridSize)) / 2; // (800 - 420)/2 = 190
+
         function toLocal(x, y) { return myRole === 'p2' ? { x: (mapWidth - 1) - x, y: (mapHeight - 1) - y } : { x: x, y: y }; }
         function toServer(x, y) { return myRole === 'p2' ? { x: (mapWidth - 1) - x, y: (mapHeight - 1) - y } : { x: x, y: y }; }
+        
         function gridToWorld(lx, ly) {
-            const sX = (800 - (mapWidth * gridSize)) / 2;
-            const sY = (700 - (mapHeight * gridSize)) / 2 + 20; 
-            return { x: sX + lx * gridSize + 30, y: sY + ly * gridSize + 30 };
+            return { x: offsetX + lx * gridSize + 30, y: offsetY + ly * gridSize + 30 };
+        }
+        
+        // ★ 핵심: 마우스 좌표를 그리드 좌표로 역변환 (클릭 판정용) ★
+        function worldToGrid(wx, wy) {
+            const lx = Math.floor((wx - offsetX) / gridSize);
+            const ly = Math.floor((wy - offsetY) / gridSize);
+            return { x: lx, y: ly };
         }
 
         document.getElementById('find-match-btn').onclick = () => {
@@ -309,16 +326,9 @@
                 let artKey = data.name === "보우 마스터" ? "bowmaster" : data.name.toLowerCase();
                 if(!PIXEL_DATA[artKey]) artKey = "knight";
 
-                this.sprite = scene.add.sprite(pos.x, pos.y, artKey + '_art').setScale(1.5).setInteractive().setDepth(10);
+                this.sprite = scene.add.sprite(pos.x, pos.y, artKey + '_art').setScale(1.5);
                 if (!isMe) this.sprite.setTint(0xff8888);
-                this.hpText = scene.add.text(pos.x, pos.y - 35, `${this.hp}`, { fontSize: '14px', fontStyle: 'bold' }).setOrigin(0.5).setDepth(11);
-
-                this.sprite.on('pointerdown', () => {
-                    scene.descText.setText(`[${this.name}]\nHP:${this.hp}/${this.maxHp} MP:${this.mp}\n상태: ${this.passive?.name || '없음'}`);
-                    // 클릭 시 로그 확인
-                    console.log("Unit Clicked. MyTurn:", isMyTurn, "State:", gameState);
-                    if(isMe && gameState === STATE.IDLE) window.onTileClick(this.localX, this.localY);
-                });
+                this.hpText = scene.add.text(pos.x, pos.y - 35, `${this.hp}`, { fontSize: '14px', fontStyle: 'bold' }).setOrigin(0.5);
             }
 
             updatePos(lx, ly) {
@@ -335,7 +345,7 @@
         }
 
         const config = {
-            type: Phaser.AUTO, parent: 'game-container', width: 800, height: 700,
+            type: Phaser.AUTO, parent: 'game-container', width: 800, height: 800,
             backgroundColor: '#1a1a1a', scene: { preload: preload, create: create }
         };
 
@@ -358,9 +368,15 @@
         function create() {
             if (!mapData || mapData.length === 0) { console.error("Map Data Missing!"); return; }
 
-            const sX = (800 - (mapWidth * gridSize)) / 2;
-            const sY = (700 - (mapHeight * gridSize)) / 2 + 20;
+            // 배경 클릭 감지 (Global Input)
+            this.input.on('pointerdown', (pointer) => {
+                const pos = worldToGrid(pointer.x, pointer.y);
+                if (pos.x >= 0 && pos.x < mapWidth && pos.y >= 0 && pos.y < mapHeight) {
+                    processClick(pos.x, pos.y);
+                }
+            });
 
+            // 맵 그리기
             for (let x = 0; x < mapWidth; x++) {
                 for (let y = 0; y < mapHeight; y++) {
                     const sPos = toServer(x, y);
@@ -368,8 +384,9 @@
                     const type = cell ? cell.type : 'Grass';
                     
                     let color = type === 'Water' ? 0x1a4a7a : type === 'Mountain' ? 0x4a4a4a : type === 'Sand' ? 0x8a7a4a : 0x3d5e3a;
-                    const tile = this.add.rectangle(sX + x*gridSize + 30, sY + y*gridSize + 30, 56, 56, color).setStrokeStyle(1, 0x000, 0.5).setInteractive();
-                    tile.on('pointerdown', () => window.onTileClick(x, y));
+                    const tile = this.add.rectangle(0, 0, 56, 56, color).setStrokeStyle(1, 0x000, 0.5);
+                    const p = gridToWorld(x, y);
+                    tile.setPosition(p.x, p.y);
                 }
             }
 
@@ -379,37 +396,50 @@
             playerUnit = new Unit(this, DB.CHARACTERS[myK], 5, 6, true);
             enemyUnit = new Unit(this, DB.CHARACTERS[enK], 5, 0, false);
 
-            this.add.rectangle(400, 25, 800, 50, 0x222222);
-            hudTextP1 = this.add.text(20, 15, "", { fontSize: '18px', fill: '#0f0' });
-            hudTextP2 = this.add.text(780, 15, "", { fontSize: '18px', fill: '#f00' }).setOrigin(1, 0);
+            this.add.rectangle(400, 30, 700, 40, 0x222222);
+            hudTextP1 = this.add.text(60, 20, "", { fontSize: '18px', fill: '#0f0' });
+            hudTextP2 = this.add.text(740, 20, "", { fontSize: '18px', fill: '#f00' }).setOrigin(1, 0);
             
-            this.add.rectangle(400, 660, 780, 70, 0x000000, 0.8).setStrokeStyle(1, 0x555);
-            this.descText = this.add.text(400, 660, "대기 중...", { fontSize: '16px', align: 'center' }).setOrigin(0.5);
+            // 설명창 하단 고정
+            this.add.rectangle(400, 760, 700, 60, 0x000000, 0.9).setStrokeStyle(1, 0x555);
+            this.descText = this.add.text(400, 760, "대기 중...", { fontSize: '16px', align: 'center' }).setOrigin(0.5);
 
-            actionMenu = this.add.container(680, 100);
-            actionMenu.setDepth(100); // UI는 최상단
+            actionMenu = this.add.container(680, 150);
             updateHUD();
             setupSync();
         }
 
-        window.onTileClick = function(lx, ly) {
-            console.log("Tile Click:", lx, ly, "State:", gameState);
+        // ★★★ 핵심: 글로벌 클릭 처리기 ★★★
+        function processClick(lx, ly) {
+            console.log("Global Click:", lx, ly, "State:", gameState);
+            
+            // 1. 유닛 정보 표시
+            if (lx === playerUnit.localX && ly === playerUnit.localY) {
+                game.scene.scenes[0].descText.setText(`[나: ${playerUnit.name}]\nHP:${playerUnit.hp} MP:${playerUnit.mp}`);
+            } else if (lx === enemyUnit.localX && ly === enemyUnit.localY) {
+                game.scene.scenes[0].descText.setText(`[적: ${enemyUnit.name}]\nHP:${enemyUnit.hp} MP:${enemyUnit.mp}`);
+            }
+
             if (!isMyTurn || gameState === STATE.BUSY) return;
 
+            // 2. 이동 선택 모드 진입
             if (gameState === STATE.IDLE && lx === playerUnit.localX && ly === playerUnit.localY) {
-                console.log("-> Move Select Mode");
                 playerUnit.savePos();
                 clearHighlights();
                 showMoveRange(lx, ly, Phaser.Math.Between(playerUnit.moveRange[0], playerUnit.moveRange[1]));
                 gameState = STATE.MOVE_SELECT;
-            } else if (gameState === STATE.MOVE_SELECT && isHighlighted(lx, ly)) {
-                console.log("-> Move to", lx, ly);
+                game.scene.scenes[0].descText.setText("이동할 곳을 선택하세요.");
+            } 
+            // 3. 이동 실행
+            else if (gameState === STATE.MOVE_SELECT && isHighlighted(lx, ly)) {
                 reservedX = lx; reservedY = ly;
                 clearHighlights();
                 playerUnit.updatePos(lx, ly);
                 gameState = STATE.ACTION_WAIT;
                 openActionMenu();
-            } else if (gameState === STATE.TARGET_SELECT && isHighlighted(lx, ly)) {
+            } 
+            // 4. 스킬 타겟 선택
+            else if (gameState === STATE.TARGET_SELECT && isHighlighted(lx, ly)) {
                 if (lx === enemyUnit.localX && ly === enemyUnit.localY) executeAction(selectedSkill, enemyUnit);
                 else executeAction(selectedSkill, playerUnit);
             }
@@ -417,7 +447,7 @@
 
         function openActionMenu() {
             actionMenu.removeAll(true);
-            const bg = playerUnit.scene.add.rectangle(60, 150, 140, 320, 0x111111, 0.9).setStrokeStyle(1, 0x888);
+            const bg = playerUnit.scene.add.rectangle(0, 150, 140, 320, 0x111111, 0.9).setStrokeStyle(1, 0x888);
             actionMenu.add(bg);
 
             let y = 0;
@@ -425,8 +455,8 @@
                 const cd = playerUnit.cooldowns[skill.id] || 0;
                 const disabled = cd > 0;
                 
-                const btn = playerUnit.scene.add.rectangle(60, y, 120, 40, disabled ? 0x444 : 0x880000).setInteractive();
-                const txt = playerUnit.scene.add.text(60, y, skill.name + (cd?`(${cd})`:""), {fontSize:'14px'}).setOrigin(0.5);
+                const btn = playerUnit.scene.add.rectangle(0, y, 120, 40, disabled ? 0x444 : 0x880000).setInteractive();
+                const txt = playerUnit.scene.add.text(0, y, skill.name + (cd?`(${cd})`:""), {fontSize:'14px'}).setOrigin(0.5);
                 
                 btn.on('pointerover', () => playerUnit.scene.descText.setText(`[${skill.name}]\n${skill.desc}`));
                 if (!disabled) btn.on('pointerdown', () => {
@@ -441,13 +471,14 @@
                 actionMenu.add(btn); actionMenu.add(txt); y += 45;
             });
 
-            const cancelBtn = playerUnit.scene.add.rectangle(60, y, 120, 40, 0x444).setInteractive();
-            const cancelTxt = playerUnit.scene.add.text(60, y, "이동 취소", {fontSize:'14px'}).setOrigin(0.5);
+            const cancelBtn = playerUnit.scene.add.rectangle(0, y, 120, 40, 0x444).setInteractive();
+            const cancelTxt = playerUnit.scene.add.text(0, y, "이동 취소", {fontSize:'14px'}).setOrigin(0.5);
             cancelBtn.on('pointerdown', () => {
                 playerUnit.revertPos();
                 gameState = STATE.IDLE;
                 actionMenu.removeAll(true);
                 clearHighlights();
+                game.scene.scenes[0].descText.setText("이동 취소됨.");
             });
             actionMenu.add(cancelBtn); actionMenu.add(cancelTxt);
         }
@@ -517,9 +548,7 @@
             hudTextP2.setText(`[적] HP:${enemyUnit.hp} MP:${enemyUnit.mp}`);
         }
 
-        // ★★★ 핵심 수정: 이동 칸의 Depth를 높이고, 직접 클릭 가능하게 만듦 ★★★
         function showMoveRange(sx, sy, r) {
-            console.log("Showing Move Range around", sx, sy, "Radius:", r);
             for (let x = 0; x < mapWidth; x++) for (let y = 0; y < mapHeight; y++) {
                 const d = Math.abs(x - sx) + Math.abs(y - sy);
                 const sPos = toServer(x, y);
@@ -530,16 +559,9 @@
                 if (t === 'Mountain' || t === 'Water' || d === 0 || d > r || isEnemy) continue;
                 
                 const p = gridToWorld(x, y);
-                // setDepth(999)로 최상단 표시, setInteractive로 클릭 활성화
-                const rect = playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0x0000ff, 0.5)
-                    .setDepth(999)
-                    .setInteractive();
-                
-                rect.on('pointerdown', () => {
-                    console.log("Blue Square Clicked:", x, y);
-                    window.onTileClick(x, y);
-                });
-                
+                // 100% 클릭 보장을 위해 setInteractive는 하지 않고 좌표 판정만 사용
+                // 시각적 효과만 담당
+                const rect = playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0x0000ff, 0.4);
                 highlights.push({x, y, rect});
             }
         }
@@ -548,11 +570,7 @@
             for (let x = 0; x < mapWidth; x++) for (let y = 0; y < mapHeight; y++) {
                 if (Math.abs(x - sx) + Math.abs(y - sy) <= r) {
                     const p = gridToWorld(x, y);
-                    const rect = playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0xff0000, 0.4)
-                        .setDepth(999)
-                        .setInteractive();
-                    
-                    rect.on('pointerdown', () => window.onTileClick(x, y));
+                    const rect = playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0xff0000, 0.4);
                     highlights.push({x, y, rect});
                 }
             }
@@ -579,6 +597,7 @@
             }
             return m;
         }
+        function isHighlighted(x, y) { return highlights.some(h => h.x === x && h.y === y); }
     </script>
 </body>
 </html>
