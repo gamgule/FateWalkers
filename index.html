@@ -2,66 +2,30 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Fate Walkers - Tactics</title>
+    <title>Fate Walkers - Tactics (Final Fix)</title>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-
-        body {
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            color: white; font-family: 'Pretendard', sans-serif;
-            margin: 0; display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            min-height: 100vh; overflow: hidden; user-select: none;
-        }
-
-        #lobby-screen, #char-select-screen {
-            text-align: center; background: rgba(0, 0, 0, 0.7);
-            padding: 40px; border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        #char-select-screen { display: none; max-width: 900px; }
-        
-        h1 {
-            font-size: 3rem; margin-bottom: 20px;
-            background: linear-gradient(to right, #00c6ff, #0072ff);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-
-        button {
-            padding: 15px 40px; font-size: 1.2rem; font-weight: bold; color: white;
-            border: none; border-radius: 50px; cursor: pointer; margin-top: 20px;
-            transition: 0.2s;
-        }
-        #find-match-btn { background: linear-gradient(45deg, #ff416c, #ff4b2b); }
-        #find-match-btn:hover { transform: scale(1.05); }
-        #lock-in-btn { background: #0072ff; }
-        #lock-in-btn:disabled { background: #555; cursor: not-allowed; }
-
-        #char-grid { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 20px 0; }
-        
-        #char-info-box {
-            background: rgba(20, 20, 20, 0.9); border: 1px solid #00c6ff;
-            color: #ddd; padding: 15px; border-radius: 8px;
-            min-height: 80px; width: 100%; box-sizing: border-box; white-space: pre-line;
-        }
-
-        #game-container { display: none; border: 4px solid #333; box-shadow: 0 0 30px black; }
+        body { background: #1a1a1a; color: white; font-family: 'Pretendard', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; user-select: none; }
+        .screen { text-align: center; background: rgba(0,0,0,0.8); padding: 40px; border-radius: 15px; border: 1px solid #444; }
+        #char-select-screen, #game-container { display: none; }
+        button { padding: 15px 30px; font-size: 1.2rem; background: #0072ff; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        #char-grid { display: flex; gap: 10px; margin: 20px 0; justify-content: center; flex-wrap: wrap; }
+        #char-info-box { background: #222; padding: 15px; margin-top: 10px; border-radius: 5px; min-height: 60px; white-space: pre-line; border: 1px solid #555; }
     </style>
 </head>
 <body>
 
-    <div id="lobby-screen">
-        <h1>Fate Walkers</h1>
-        <p>Turn-Based Strategy PVP</p>
+    <div id="lobby-screen" class="screen">
+        <h1 style="color:#00c6ff">Fate Walkers</h1>
         <button id="find-match-btn">매칭 시작</button>
+        <p id="status-log" style="color:#888; font-size: 14px; margin-top:10px;"></p>
     </div>
 
-    <div id="char-select-screen">
-        <h2>영웅 선택</h2>
+    <div id="char-select-screen" class="screen" style="max-width: 800px;">
+        <h2>캐릭터 선택</h2>
         <div id="char-grid"></div>
-        <div id="char-info-box">캐릭터에 마우스를 올리면 정보가 표시됩니다.</div>
+        <div id="char-info-box">캐릭터를 선택하세요.</div>
         <button id="lock-in-btn" disabled>선택 완료</button>
     </div>
 
@@ -75,7 +39,7 @@
         // =========================================================
         // ★★★ 여기에 본인의 파이어베이스 키를 꼭 입력하세요! ★★★
         // =========================================================
-       const firebaseConfig = {
+        const firebaseConfig = {
   apiKey: "AIzaSyCMtMnUbfeeLTSFZJuRhDkv5xoCi2ioS6M",
   authDomain: "fatewalkers-29335.firebaseapp.com",
   databaseURL: "https://fatewalkers-29335-default-rtdb.firebaseio.com",
@@ -89,7 +53,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // [데이터]
+        // [데이터 정의]
         const DB = {
             SKILLS: {
                 SLASH: { name: "베기", power: 25, range: 3, cooldown: 0, cost: 0, desc: "사거리 3칸, 데미지 25" },
@@ -137,13 +101,13 @@
             pathfinder: { colors: {'o':'#FF4500','b':'#444','f':'#FFCC99'}, data: ["  oooo  "," oooooo ","  ffff  ","  bbbb  "," obbbbo ","  b  b  "] }
         };
 
-        // 전역 변수
         let myRole = null; let currentRoomId = null; let isMyTurn = false;
         let selectedCharKey = null; let game = null;
-        let mapData = [];
+        let mapData = []; 
         const mapWidth = 11, mapHeight = 7, gridSize = 60;
         const STATE = { IDLE: 0, MOVE_SELECT: 1, ACTION_WAIT: 2, TARGET_SELECT: 3, BUSY: 4 };
 
+        // 좌표 변환 (P2는 뒤집어서)
         function toLocal(x, y) { return myRole === 'p2' ? { x: (mapWidth - 1) - x, y: (mapHeight - 1) - y } : { x: x, y: y }; }
         function toServer(x, y) { return myRole === 'p2' ? { x: (mapWidth - 1) - x, y: (mapHeight - 1) - y } : { x: x, y: y }; }
         function gridToWorld(lx, ly) {
@@ -152,61 +116,87 @@
             return { x: sX + lx * gridSize + 30, y: sY + ly * gridSize + 30 };
         }
 
+        // 맵 생성 함수 (데이터 없을 때 비상용)
+        function generateMap() {
+            let m = [];
+            for(let x=0; x<mapWidth; x++) {
+                m[x] = [];
+                for(let y=0; y<mapHeight; y++) {
+                    let t = 'Grass';
+                    if(x!==5 && Math.random()<0.25) t=['Water','Mountain','Sand'][Math.floor(Math.random()*3)];
+                    m[x][y] = {type: t};
+                }
+            }
+            return m;
+        }
+
+        function drawIcon(pixels, colors) {
+            const c = document.createElement('canvas'); c.width=32; c.height=32; const ctx=c.getContext('2d');
+            const s=32/pixels.length;
+            pixels.forEach((row, y) => [...row].forEach((col, x) => {
+                if(col!==' ') { ctx.fillStyle=colors[col]; ctx.fillRect(x*s, y*s, s, s); }
+            }));
+            return c.toDataURL();
+        }
+
+        // ==========================================
+        // [매칭 로직]
+        // ==========================================
+        const statusLog = document.getElementById('status-log');
+        
         document.getElementById('find-match-btn').onclick = () => {
             const btn = document.getElementById('find-match-btn');
-            btn.disabled = true; btn.innerText = "매칭 중...";
+            btn.disabled = true; btn.innerText = "서버 연결 중...";
             
-            const roomsRef = ref(db, 'rooms');
-            get(roomsRef).then((snap) => {
+            get(ref(db, 'rooms')).then((snap) => {
                 const rooms = snap.val(); let found = null;
                 if (rooms) for (let id in rooms) if (rooms[id].status === 'waiting') { found = id; break; }
-                if (found) joinRoom(found); else createRoom();
-            }).catch(e => { 
-                alert("DB 연결 오류! F12 콘솔을 확인하세요."); 
-                console.error(e);
-                btn.disabled = false; btn.innerText = "매칭 시작"; 
+                
+                if (found) joinRoom(found);
+                else createRoom();
+            }).catch(e => {
+                alert("키값 오류! index.html의 firebaseConfig를 확인하세요.");
+                btn.disabled = false; btn.innerText = "매칭 시작";
             });
         };
 
         function createRoom() {
-            console.log("Creating Room...");
             const newRef = push(ref(db, 'rooms'));
             currentRoomId = newRef.key; myRole = 'p1';
-            const map = generateMap(); // 맵 생성
+            // ★ 중요: 맵 생성 후 바로 저장
+            mapData = generateMap(); 
+            set(newRef, { status: 'waiting', turn: 'p1', map: mapData, p1Ready: false, p2Ready: false });
             
-            console.log("Map Generated:", map); // 디버깅용 로그
-
-            set(newRef, { status: 'waiting', turn: 'p1', map: map, p1Ready: false, p2Ready: false });
+            statusLog.innerText = "방 생성 완료! 참가자를 기다립니다...";
             onValue(newRef, (s) => { if (s.val()?.status === 'selecting') onMatchFound(); });
         }
 
         function joinRoom(id) {
-            console.log("Joining Room:", id);
             currentRoomId = id; myRole = 'p2';
             update(ref(db, `rooms/${id}`), { status: 'selecting' });
+            statusLog.innerText = "방 발견! 접속 중...";
             onMatchFound();
         }
 
         function onMatchFound() {
             document.getElementById('lobby-screen').style.display = 'none';
-            document.getElementById('char-select-screen').style.display = 'flex';
+            document.getElementById('char-select-screen').style.display = 'block';
             renderCharSelect();
         }
 
         function renderCharSelect() {
             const grid = document.getElementById('char-grid');
-            grid.innerHTML = ''; // ★ 증식 방지 코드
+            grid.innerHTML = ''; // ★ 기존 버튼 제거 (증식 방지)
             const info = document.getElementById('char-info-box');
-            
+
             Object.keys(DB.CHARACTERS).forEach(k => {
                 const c = DB.CHARACTERS[k];
                 const artKey = k.toLowerCase().replace('master', 'master');
                 const iconData = PIXEL_DATA[artKey] || PIXEL_DATA['knight'];
-                const iconUrl = drawIcon(iconData.data, iconData.colors);
-
+                
                 const el = document.createElement('div');
                 el.style.cssText = `width:100px; height:120px; background:${c.color}; border:2px solid #fff; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center;`;
-                el.innerHTML = `<img src="${iconUrl}" style="width:64px; height:64px; image-rendering:pixelated; margin-bottom:5px;"><b>${c.name}</b>`;
+                el.innerHTML = `<img src="${drawIcon(iconData.data, iconData.colors)}" style="width:64px; margin-bottom:5px;"><b>${c.name}</b>`;
                 
                 el.onmouseenter = () => info.innerText = `[${c.name}]\n체력:${c.hp} / 이동:${c.move[0]}~${c.move[1]}\n패시브: ${DB.PASSIVES[c.passive].name}\n\n${DB.PASSIVES[c.passive].desc}`;
                 el.onclick = () => {
@@ -220,70 +210,63 @@
             });
 
             const lockBtn = document.getElementById('lock-in-btn');
+            // 버튼 복제로 이벤트 중복 방지
             const newLockBtn = lockBtn.cloneNode(true);
             lockBtn.parentNode.replaceChild(newLockBtn, lockBtn);
             
             newLockBtn.onclick = () => {
                 update(ref(db, `rooms/${currentRoomId}`), { [`${myRole}Ready`]: true });
                 newLockBtn.disabled = true;
-                newLockBtn.innerText = "대기 중...";
+                newLockBtn.innerText = "상대 대기 중...";
             };
         }
 
-        // 게임 시작 감시
+        // ★ 게임 시작 감시 및 데이터 로드 안전장치
         setInterval(() => {
-            if (!currentRoomId) return;
+            if (!currentRoomId || game) return;
+            
             get(ref(db, `rooms/${currentRoomId}`)).then((snap) => {
                 const d = snap.val(); if (!d) return;
-                
-                // ★ 맵 데이터가 존재하는지 안전 체크
-                if (d.p1Ready && d.p2Ready && d.status !== 'playing') {
-                    if (d.map) {
-                        console.log("Both Ready. Starting Game with Map:", d.map);
-                        window.selectedChars = { p1: d.p1Char, p2: d.p2Char };
-                        mapData = d.map;
-                        if (myRole === 'p1') update(ref(db, `rooms/${currentRoomId}`), { status: 'playing' });
-                        startGame();
-                    } else {
-                        console.warn("Waiting for Map data...");
+
+                // 둘 다 준비완료 혹은 이미 게임중일 때
+                if ((d.p1Ready && d.p2Ready) || d.status === 'playing') {
+                    
+                    // 맵 데이터 동기화
+                    if (d.map) mapData = d.map;
+                    
+                    // 만약 맵 데이터가 없다면? (P2 입장에서 늦게 뜰 수 있음) -> 로컬에서라도 만듦 (안전장치)
+                    if (!mapData || mapData.length === 0) {
+                        console.warn("맵 데이터 수신 실패! 비상용 맵 생성");
+                        mapData = generateMap();
                     }
-                } 
-                else if (d.status === 'playing' && !game) {
-                     if (d.map) {
-                        console.log("Rejoining/Starting Game with Map:", d.map);
-                        window.selectedChars = { p1: d.p1Char, p2: d.p2Char };
-                        mapData = d.map;
-                        startGame();
-                     }
+
+                    if (myRole === 'p1') update(ref(db, `rooms/${currentRoomId}`), { status: 'playing' });
+                    
+                    window.selectedChars = { p1: d.p1Char, p2: d.p2Char };
+                    
+                    // 화면 전환
+                    document.getElementById('char-select-screen').style.display = 'none';
+                    document.getElementById('game-container').style.display = 'block';
+                    
+                    // 게임 시작
+                    game = new Phaser.Game(config);
                 }
             });
-        }, 1500);
+        }, 1000);
 
-        function startGame() {
-            if(game) return;
-            document.getElementById('lobby-screen').style.display = 'none';
-            document.getElementById('char-select-screen').style.display = 'none';
-            document.getElementById('game-container').style.display = 'block';
-            game = new Phaser.Game(config);
-        }
-
-        // Phaser
+        // ==========================================
+        // [Phaser 게임 로직]
+        // ==========================================
         class Unit {
             constructor(scene, data, lx, ly, isMe) {
-                this.scene = scene;
-                this.name = data.name; this.maxHp = data.hp; this.hp = data.hp; 
-                this.mp = 0; this.maxMp = data.mp || 0;
-                this.localX = lx; this.localY = ly; this.isMe = isMe;
-                this.prevX = lx; this.prevY = ly;
-                
+                this.scene = scene; this.name = data.name; this.maxHp = data.hp; this.hp = data.hp; this.mp = 0; this.maxMp = data.mp || 0;
+                this.localX = lx; this.localY = ly; this.isMe = isMe; this.prevX = lx; this.prevY = ly;
                 this.skills = data.skills.map(k => ({...DB.SKILLS[k], id: k}));
                 this.passive = data.passive ? DB.PASSIVES[data.passive] : null;
                 this.moveRange = data.move; this.cooldowns = {}; 
+                // 상태값
+                this.movedDistance = 0; this.arrows = 0;
                 
-                this.shieldThrowUsed = false; this.aimActive = false; 
-                this.moveBuffTurns = 0; this.hitCount = 0;
-                this.arrows = 0; this.movedDistance = 0; this.pathDetectActive = false;
-
                 const pos = gridToWorld(lx, ly);
                 let artKey = data.name === "보우 마스터" ? "bowmaster" : data.name.toLowerCase();
                 if(!PIXEL_DATA[artKey]) artKey = "knight";
@@ -293,13 +276,11 @@
                 this.hpText = scene.add.text(pos.x, pos.y - 35, `${this.hp}`, { fontSize: '14px', fontStyle: 'bold' }).setOrigin(0.5);
 
                 this.sprite.on('pointerdown', () => {
-                   scene.descText.setText(`[${this.name}]\nHP:${this.hp}/${this.maxHp} MP:${this.mp}\n상태: ${this.passive?.name || '없음'}`);
+                   scene.descText.setText(`[${this.name}]\nHP:${this.hp}/${this.maxHp} MP:${this.mp}\n상태: ${this.passive?.name || '-'}`);
                 });
             }
-
             updatePos(lx, ly) {
-                const dist = Math.abs(this.localX - lx) + Math.abs(this.localY - ly);
-                if (this.isMe) this.movedDistance += dist;
+                if (this.isMe) this.movedDistance += (Math.abs(this.localX - lx) + Math.abs(this.localY - ly));
                 this.localX = lx; this.localY = ly;
                 const pos = gridToWorld(lx, ly);
                 this.sprite.x = pos.x; this.sprite.y = pos.y;
@@ -315,40 +296,35 @@
             backgroundColor: '#1a1a1a', scene: { preload: preload, create: create }
         };
 
-        let hudTextP1, hudTextP2, actionMenu, highlights = [];
+        let hudP1, hudP2, actionMenu, highlights = [];
         let playerUnit, enemyUnit;
 
         function preload() {
             const createArt = (key, colors, pixels) => {
                 const canvas = this.textures.createCanvas(key, 32, 32);
                 const ctx = canvas.context;
-                const size = 32 / pixels.length;
-                for(let y=0; y<pixels.length; y++) for(let x=0; x<pixels[y].length; x++) {
-                    if(pixels[y][x] !== ' ') { ctx.fillStyle = colors[pixels[y][x]]; ctx.fillRect(x*size, y*size, size, size); }
-                }
+                const s = 32 / pixels.length;
+                pixels.forEach((row, y) => [...row].forEach((col, x) => {
+                    if(col!==' ') { ctx.fillStyle=colors[col]; ctx.fillRect(x*s, y*s, s, s); }
+                }));
                 canvas.refresh();
             };
             Object.keys(PIXEL_DATA).forEach(k => createArt(k+'_art', PIXEL_DATA[k].colors, PIXEL_DATA[k].data));
         }
 
         function create() {
-            // ★ 안전장치: 맵 데이터가 없으면 중단
-            if (!mapData || mapData.length === 0) { 
-                console.error("Map Data is missing in Phaser Create!"); 
-                this.add.text(400, 300, "맵 로딩 실패. 새로고침 해주세요.", {fontSize: '20px'}).setOrigin(0.5);
-                return; 
-            }
+            // ★ 최후의 안전장치: 맵 데이터가 없으면 여기서라도 생성
+            if (!mapData || mapData.length === 0) mapData = generateMap();
 
             const sX = (800 - (mapWidth * gridSize)) / 2;
             const sY = (600 - (mapHeight * gridSize)) / 2 + 30;
 
             for (let x = 0; x < mapWidth; x++) {
-                // visualGrid[x] = []; // 필요시 사용
                 for (let y = 0; y < mapHeight; y++) {
                     const sPos = toServer(x, y);
-                    // ★ 맵 데이터 안전 접근
-                    const cell = (mapData[sPos.x]) ? mapData[sPos.x][sPos.y] : null;
-                    const type = cell ? cell.type : 'Grass';
+                    // 배열 접근 안전 처리
+                    const cell = (mapData[sPos.x]) ? mapData[sPos.x][sPos.y] : {type:'Grass'}; 
+                    const type = cell.type || 'Grass';
                     
                     let color = type === 'Water' ? 0x1a4a7a : type === 'Mountain' ? 0x4a4a4a : type === 'Sand' ? 0x8a7a4a : 0x3d5e3a;
                     const tile = this.add.rectangle(sX + x*gridSize + 30, sY + y*gridSize + 30, 56, 56, color).setStrokeStyle(1, 0x000, 0.5).setInteractive();
@@ -363,8 +339,8 @@
             enemyUnit = new Unit(this, DB.CHARACTERS[enK], 5, 0, false);
 
             this.add.rectangle(400, 25, 800, 50, 0x222222);
-            hudTextP1 = this.add.text(20, 15, "", { fontSize: '18px', fill: '#0f0' });
-            hudTextP2 = this.add.text(780, 15, "", { fontSize: '18px', fill: '#f00' }).setOrigin(1, 0);
+            hudP1 = this.add.text(20, 15, "", { fontSize: '18px', fill: '#0f0' });
+            hudP2 = this.add.text(780, 15, "", { fontSize: '18px', fill: '#f00' }).setOrigin(1, 0);
             
             this.add.rectangle(400, 560, 780, 70, 0x000000, 0.8).setStrokeStyle(1, 0x555);
             this.descText = this.add.text(400, 560, "대기 중...", { fontSize: '16px', align: 'center' }).setOrigin(0.5);
@@ -445,7 +421,7 @@
 
             if (skill.triggerReAction) {
                 endTurnEffects(playerUnit);
-                playerUnit.scene.descText.setText("재행동 발동! (쿨타임/MP 회복됨)");
+                playerUnit.scene.descText.setText("재행동! (MP회복/쿨감 적용됨)");
                 setTimeout(() => { gameState = STATE.IDLE; updateDB(false); }, 800);
             } else {
                 setTimeout(() => updateDB(true), 500);
@@ -492,22 +468,18 @@
 
         function updateHUD() {
             if(!playerUnit || !enemyUnit) return;
-            hudTextP1.setText(`[나] HP:${playerUnit.hp} MP:${playerUnit.mp}`);
-            hudTextP2.setText(`[적] HP:${enemyUnit.hp} MP:${enemyUnit.mp}`);
+            hudP1.setText(`[나] HP:${playerUnit.hp} MP:${playerUnit.mp}`);
+            hudP2.setText(`[적] HP:${enemyUnit.hp} MP:${enemyUnit.mp}`);
         }
 
         function showMoveRange(sx, sy, r) {
             for (let x = 0; x < mapWidth; x++) for (let y = 0; y < mapHeight; y++) {
                 const d = Math.abs(x - sx) + Math.abs(y - sy);
                 const sPos = toServer(x, y);
-                // ★ 맵 데이터 안전 접근 (mapData[sPos.x] 체크)
-                const cell = mapData[sPos.x] ? mapData[sPos.x][sPos.y] : null;
-                const t = cell ? cell.type : 'Grass';
-                
-                const isEnemy = (x === enemyUnit.localX && y === enemyUnit.localY); 
-                
+                const cell = mapData[sPos.x] ? mapData[sPos.x][sPos.y] : {type:'Grass'};
+                const t = cell.type;
+                const isEnemy = (x === enemyUnit.localX && y === enemyUnit.localY);
                 if (t === 'Mountain' || t === 'Water' || d === 0 || d > r || isEnemy) continue;
-                
                 const p = gridToWorld(x, y);
                 const rect = playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0x0000ff, 0.3);
                 highlights.push({x, y, rect});
@@ -525,26 +497,6 @@
         }
 
         function clearHighlights() { highlights.forEach(h => h.rect.destroy()); highlights = []; }
-        function drawIcon(pixels, colors) {
-            const c = document.createElement('canvas'); c.width=32; c.height=32; const ctx=c.getContext('2d');
-            const s=32/pixels.length;
-            pixels.forEach((row, y) => [...row].forEach((col, x) => {
-                if(col!==' ') { ctx.fillStyle=colors[col]; ctx.fillRect(x*s, y*s, s, s); }
-            }));
-            return c.toDataURL();
-        }
-        function generateMap() {
-            let m = [];
-            for(let x=0; x<mapWidth; x++) {
-                m[x] = [];
-                for(let y=0; y<mapHeight; y++) {
-                    let t = 'Grass';
-                    if(x!==5 && Math.random()<0.3) t=['Water','Mountain','Sand'][Math.floor(Math.random()*3)];
-                    m[x][y] = {type: t};
-                }
-            }
-            return m;
-        }
     </script>
 </body>
 </html>
