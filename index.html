@@ -2,30 +2,91 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Fate Walkers - Tactics (Final Fix)</title>
+    <title>Fate Walkers - Tactics</title>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-        body { background: #1a1a1a; color: white; font-family: 'Pretendard', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; user-select: none; }
-        .screen { text-align: center; background: rgba(0,0,0,0.8); padding: 40px; border-radius: 15px; border: 1px solid #444; }
-        #char-select-screen, #game-container { display: none; }
-        button { padding: 15px 30px; font-size: 1.2rem; background: #0072ff; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; }
-        button:disabled { background: #555; cursor: not-allowed; }
-        #char-grid { display: flex; gap: 10px; margin: 20px 0; justify-content: center; flex-wrap: wrap; }
-        #char-info-box { background: #222; padding: 15px; margin-top: 10px; border-radius: 5px; min-height: 60px; white-space: pre-line; border: 1px solid #555; }
+
+        body {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: white; font-family: 'Pretendard', sans-serif;
+            margin: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            min-height: 100vh; overflow: hidden; user-select: none;
+        }
+
+        #lobby-screen, #char-select-screen {
+            text-align: center; background: rgba(0, 0, 0, 0.85);
+            padding: 40px; border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: absolute; z-index: 10;
+        }
+
+        #char-select-screen { display: none; width: 900px; max-height: 90vh; overflow-y: auto; }
+        
+        h1 {
+            font-size: 3rem; margin-bottom: 20px;
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        button {
+            padding: 15px 40px; font-size: 1.2rem; font-weight: bold; color: white;
+            border: none; border-radius: 50px; cursor: pointer; margin-top: 20px;
+            transition: 0.2s;
+        }
+        #find-match-btn { background: linear-gradient(45deg, #ff416c, #ff4b2b); }
+        #find-match-btn:hover { transform: scale(1.05); }
+        #lock-in-btn { background: #0072ff; }
+        #lock-in-btn:disabled { background: #555; cursor: not-allowed; }
+
+        #char-grid { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin: 20px 0; }
+        
+        /* 캐릭터 설명창 디자인 개선 */
+        #char-info-box {
+            background: rgba(30, 30, 30, 0.95); border: 2px solid #00c6ff;
+            color: #eee; padding: 20px; border-radius: 10px;
+            min-height: 200px; /* 높이 확보 */
+            width: 100%; box-sizing: border-box; 
+            text-align: left; /* 텍스트 왼쪽 정렬 */
+            font-size: 1rem;
+            line-height: 1.6;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+        
+        .info-title { font-size: 1.4rem; font-weight: bold; margin-bottom: 5px; color: #fff; }
+        .info-desc { color: #aaa; font-style: italic; margin-bottom: 15px; border-bottom: 1px solid #555; padding-bottom: 10px;}
+        .skill-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .skill-item { background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 4px; }
+        .skill-name { color: #ffd700; font-weight: bold; }
+        .passive-item { color: #00ff00; font-weight: bold; margin-top: 10px; }
+
+        /* 게임 컨테이너 */
+        #game-container { 
+            display: none; 
+            border: 4px solid #333; 
+            box-shadow: 0 0 50px rgba(0,0,0,0.8); 
+            border-radius: 10px;
+            background-color: #1a1a1a;
+        }
     </style>
 </head>
 <body>
 
-    <div id="lobby-screen" class="screen">
-        <h1 style="color:#00c6ff">Fate Walkers</h1>
+    <div id="lobby-screen">
+        <h1>Fate Walkers</h1>
+        <p>Turn-Based Strategy PVP</p>
         <button id="find-match-btn">매칭 시작</button>
-        <p id="status-log" style="color:#888; font-size: 14px; margin-top:10px;"></p>
     </div>
 
-    <div id="char-select-screen" class="screen" style="max-width: 800px;">
-        <h2>캐릭터 선택</h2>
+    <div id="char-select-screen">
+        <h2>영웅 선택</h2>
         <div id="char-grid"></div>
-        <div id="char-info-box">캐릭터를 선택하세요.</div>
+        <div id="char-info-box">
+            <div style="text-align:center; line-height: 200px; color:#666;">
+                캐릭터 위에 마우스를 올리면 상세 정보가 표시됩니다.
+            </div>
+        </div>
         <button id="lock-in-btn" disabled>선택 완료</button>
     </div>
 
@@ -39,7 +100,7 @@
         // =========================================================
         // ★★★ 여기에 본인의 파이어베이스 키를 꼭 입력하세요! ★★★
         // =========================================================
-        const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyCMtMnUbfeeLTSFZJuRhDkv5xoCi2ioS6M",
   authDomain: "fatewalkers-29335.firebaseapp.com",
   databaseURL: "https://fatewalkers-29335-default-rtdb.firebaseio.com",
@@ -53,7 +114,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // [데이터 정의]
+        // [데이터] - 캐릭터 설명(desc) 강화
         const DB = {
             SKILLS: {
                 SLASH: { name: "베기", power: 25, range: 3, cooldown: 0, cost: 0, desc: "사거리 3칸, 데미지 25" },
@@ -85,11 +146,16 @@
                 PATHFINDER_KIT: { name: "패스파인더 키트", desc: "기습(11칸이상 2배), 화살줍기(4칸당+1)" }
             },
             CHARACTERS: {
-                KNIGHT: { name: "기사", hp: 120, mp: 0, move: [3, 4], skills: ["SLASH", "UPPER_SLASH", "GUARD", "SHIELD_THROW"], passive: "KNIGHT_SHIELD", color: '#C0C0C0' },
-                MAGE: { name: "마법사", hp: 100, mp: 100, move: [2, 4], skills: ["MAGIC_MISSILE", "FIREBALL", "ICE_SPEAR", "INFERNITY"], passive: "MANA_MASTER", color: '#9C27B0' },
-                NINJA: { name: "닌자", hp: 85, mp: 0, move: [4, 5], skills: ["DIAGONAL_SLASH", "STEALTH", "KUNAI_THROW", "BACKSTAB"], passive: "STEALTH_ART", color: '#333333' },
-                BOW_MASTER: { name: "보우 마스터", hp: 100, mp: 0, move: [3, 4], skills: ["SNIPE", "AIM", "BACKSTEP", "HEADSHOT"], passive: "CRITICAL_HIT", color: '#228B22' },
-                PATHFINDER: { name: "패스파인더", hp: 70, mp: 0, move: [4, 7], skills: ["DAGGER_STAB", "PATH_DETECT", "PATH_SET", "CROSSBOW_SURGE"], passive: "PATHFINDER_KIT", color: '#FF4500' }
+                KNIGHT: { name: "기사", hp: 120, mp: 0, move: [3, 4], skills: ["SLASH", "UPPER_SLASH", "GUARD", "SHIELD_THROW"], passive: "KNIGHT_SHIELD", color: '#C0C0C0', 
+                    desc: "높은 체력과 방어력으로 전선을 유지하는 탱커입니다." },
+                MAGE: { name: "마법사", hp: 100, mp: 100, move: [2, 4], skills: ["MAGIC_MISSILE", "FIREBALL", "ICE_SPEAR", "INFERNITY"], passive: "MANA_MASTER", color: '#9C27B0', 
+                    desc: "강력한 광역 마법을 사용하지만 MP 관리가 필수인 누커입니다." },
+                NINJA: { name: "닌자", hp: 85, mp: 0, move: [4, 5], skills: ["DIAGONAL_SLASH", "STEALTH", "KUNAI_THROW", "BACKSTAB"], passive: "STEALTH_ART", color: '#333333', 
+                    desc: "은신과 순간이동으로 적의 배후를 노리는 암살자입니다." },
+                BOW_MASTER: { name: "보우 마스터", hp: 100, mp: 0, move: [3, 4], skills: ["SNIPE", "AIM", "BACKSTEP", "HEADSHOT"], passive: "CRITICAL_HIT", color: '#228B22', 
+                    desc: "초장거리에서 적을 제압하는 저격수입니다. 자리 선정이 중요합니다." },
+                PATHFINDER: { name: "패스파인더", hp: 70, mp: 0, move: [4, 7], skills: ["DAGGER_STAB", "PATH_DETECT", "PATH_SET", "CROSSBOW_SURGE"], passive: "PATHFINDER_KIT", color: '#FF4500', 
+                    desc: "이동 거리에 비례해 강해지는 기동형 사수입니다. 맵을 넓게 써야 합니다." }
             }
         };
 
@@ -103,102 +169,85 @@
 
         let myRole = null; let currentRoomId = null; let isMyTurn = false;
         let selectedCharKey = null; let game = null;
-        let mapData = []; 
+        let mapData = [];
         const mapWidth = 11, mapHeight = 7, gridSize = 60;
         const STATE = { IDLE: 0, MOVE_SELECT: 1, ACTION_WAIT: 2, TARGET_SELECT: 3, BUSY: 4 };
 
-        // 좌표 변환 (P2는 뒤집어서)
         function toLocal(x, y) { return myRole === 'p2' ? { x: (mapWidth - 1) - x, y: (mapHeight - 1) - y } : { x: x, y: y }; }
         function toServer(x, y) { return myRole === 'p2' ? { x: (mapWidth - 1) - x, y: (mapHeight - 1) - y } : { x: x, y: y }; }
         function gridToWorld(lx, ly) {
             const sX = (800 - (mapWidth * gridSize)) / 2;
-            const sY = (600 - (mapHeight * gridSize)) / 2 + 30;
+            const sY = (700 - (mapHeight * gridSize)) / 2 + 20; 
             return { x: sX + lx * gridSize + 30, y: sY + ly * gridSize + 30 };
         }
 
-        // 맵 생성 함수 (데이터 없을 때 비상용)
-        function generateMap() {
-            let m = [];
-            for(let x=0; x<mapWidth; x++) {
-                m[x] = [];
-                for(let y=0; y<mapHeight; y++) {
-                    let t = 'Grass';
-                    if(x!==5 && Math.random()<0.25) t=['Water','Mountain','Sand'][Math.floor(Math.random()*3)];
-                    m[x][y] = {type: t};
-                }
-            }
-            return m;
-        }
-
-        function drawIcon(pixels, colors) {
-            const c = document.createElement('canvas'); c.width=32; c.height=32; const ctx=c.getContext('2d');
-            const s=32/pixels.length;
-            pixels.forEach((row, y) => [...row].forEach((col, x) => {
-                if(col!==' ') { ctx.fillStyle=colors[col]; ctx.fillRect(x*s, y*s, s, s); }
-            }));
-            return c.toDataURL();
-        }
-
-        // ==========================================
-        // [매칭 로직]
-        // ==========================================
-        const statusLog = document.getElementById('status-log');
-        
         document.getElementById('find-match-btn').onclick = () => {
             const btn = document.getElementById('find-match-btn');
-            btn.disabled = true; btn.innerText = "서버 연결 중...";
-            
-            get(ref(db, 'rooms')).then((snap) => {
+            btn.disabled = true; btn.innerText = "매칭 중...";
+            const roomsRef = ref(db, 'rooms');
+            get(roomsRef).then((snap) => {
                 const rooms = snap.val(); let found = null;
                 if (rooms) for (let id in rooms) if (rooms[id].status === 'waiting') { found = id; break; }
-                
-                if (found) joinRoom(found);
-                else createRoom();
-            }).catch(e => {
-                alert("키값 오류! index.html의 firebaseConfig를 확인하세요.");
-                btn.disabled = false; btn.innerText = "매칭 시작";
-            });
+                if (found) joinRoom(found); else createRoom();
+            }).catch(e => { console.error(e); alert("DB 연결 실패!"); btn.disabled=false; });
         };
 
         function createRoom() {
             const newRef = push(ref(db, 'rooms'));
             currentRoomId = newRef.key; myRole = 'p1';
-            // ★ 중요: 맵 생성 후 바로 저장
-            mapData = generateMap(); 
-            set(newRef, { status: 'waiting', turn: 'p1', map: mapData, p1Ready: false, p2Ready: false });
-            
-            statusLog.innerText = "방 생성 완료! 참가자를 기다립니다...";
+            const map = generateMap();
+            set(newRef, { status: 'waiting', turn: 'p1', map: map, p1Ready: false, p2Ready: false });
             onValue(newRef, (s) => { if (s.val()?.status === 'selecting') onMatchFound(); });
         }
 
         function joinRoom(id) {
             currentRoomId = id; myRole = 'p2';
             update(ref(db, `rooms/${id}`), { status: 'selecting' });
-            statusLog.innerText = "방 발견! 접속 중...";
             onMatchFound();
         }
 
         function onMatchFound() {
             document.getElementById('lobby-screen').style.display = 'none';
-            document.getElementById('char-select-screen').style.display = 'block';
+            document.getElementById('char-select-screen').style.display = 'flex';
             renderCharSelect();
         }
 
         function renderCharSelect() {
             const grid = document.getElementById('char-grid');
-            grid.innerHTML = ''; // ★ 기존 버튼 제거 (증식 방지)
-            const info = document.getElementById('char-info-box');
-
+            grid.innerHTML = '';
+            const infoBox = document.getElementById('char-info-box');
+            
             Object.keys(DB.CHARACTERS).forEach(k => {
                 const c = DB.CHARACTERS[k];
                 const artKey = k.toLowerCase().replace('master', 'master');
                 const iconData = PIXEL_DATA[artKey] || PIXEL_DATA['knight'];
-                
+                const iconUrl = drawIcon(iconData.data, iconData.colors);
+
                 const el = document.createElement('div');
-                el.style.cssText = `width:100px; height:120px; background:${c.color}; border:2px solid #fff; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center;`;
-                el.innerHTML = `<img src="${drawIcon(iconData.data, iconData.colors)}" style="width:64px; margin-bottom:5px;"><b>${c.name}</b>`;
+                el.style.cssText = `width:100px; height:120px; background:${c.color}; border:2px solid #fff; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow: 0 0 10px rgba(0,0,0,0.5);`;
+                el.innerHTML = `<img src="${iconUrl}" style="width:64px; height:64px; image-rendering:pixelated; margin-bottom:5px;"><b>${c.name}</b>`;
                 
-                el.onmouseenter = () => info.innerText = `[${c.name}]\n체력:${c.hp} / 이동:${c.move[0]}~${c.move[1]}\n패시브: ${DB.PASSIVES[c.passive].name}\n\n${DB.PASSIVES[c.passive].desc}`;
+                // ★★★ 캐릭터 상세 정보 표시 로직 강화 ★★★
+                el.onmouseenter = () => {
+                    let skillHtml = `<div class='skill-list'>`;
+                    c.skills.forEach(sid => {
+                        const s = DB.SKILLS[sid];
+                        skillHtml += `<div class='skill-item'><span class='skill-name'>${s.name}</span><br><span style='font-size:0.8rem; color:#bbb;'>${s.desc}</span></div>`;
+                    });
+                    skillHtml += `</div>`;
+                    
+                    const passive = DB.PASSIVES[c.passive];
+                    
+                    infoBox.innerHTML = `
+                        <div class='info-title' style='color:${c.color}'>${c.name}</div>
+                        <div class='info-desc'>${c.desc}</div>
+                        <div><b>이동력:</b> ${c.move[0]}~${c.move[1]}칸 &nbsp;|&nbsp; <b>체력:</b> ${c.hp}</div>
+                        <div class='passive-item'>[패시브] ${passive.name}: ${passive.desc}</div>
+                        <br><b>[보유 스킬]</b>
+                        ${skillHtml}
+                    `;
+                };
+
                 el.onclick = () => {
                     Array.from(grid.children).forEach(b => b.style.border = "2px solid #fff");
                     el.style.border = "4px solid yellow";
@@ -210,63 +259,62 @@
             });
 
             const lockBtn = document.getElementById('lock-in-btn');
-            // 버튼 복제로 이벤트 중복 방지
             const newLockBtn = lockBtn.cloneNode(true);
             lockBtn.parentNode.replaceChild(newLockBtn, lockBtn);
             
             newLockBtn.onclick = () => {
                 update(ref(db, `rooms/${currentRoomId}`), { [`${myRole}Ready`]: true });
-                newLockBtn.disabled = true;
-                newLockBtn.innerText = "상대 대기 중...";
+                newLockBtn.disabled = true; newLockBtn.innerText = "대기 중...";
             };
         }
 
-        // ★ 게임 시작 감시 및 데이터 로드 안전장치
         setInterval(() => {
-            if (!currentRoomId || game) return;
-            
+            if (!currentRoomId) return;
             get(ref(db, `rooms/${currentRoomId}`)).then((snap) => {
                 const d = snap.val(); if (!d) return;
-
-                // 둘 다 준비완료 혹은 이미 게임중일 때
-                if ((d.p1Ready && d.p2Ready) || d.status === 'playing') {
-                    
-                    // 맵 데이터 동기화
-                    if (d.map) mapData = d.map;
-                    
-                    // 만약 맵 데이터가 없다면? (P2 입장에서 늦게 뜰 수 있음) -> 로컬에서라도 만듦 (안전장치)
-                    if (!mapData || mapData.length === 0) {
-                        console.warn("맵 데이터 수신 실패! 비상용 맵 생성");
-                        mapData = generateMap();
+                
+                if (d.p1Ready && d.p2Ready && d.status !== 'playing') {
+                    if (d.map) {
+                        window.selectedChars = { p1: d.p1Char, p2: d.p2Char };
+                        mapData = d.map;
+                        if (myRole === 'p1') update(ref(db, `rooms/${currentRoomId}`), { status: 'playing' });
+                        startGame();
                     }
-
-                    if (myRole === 'p1') update(ref(db, `rooms/${currentRoomId}`), { status: 'playing' });
-                    
-                    window.selectedChars = { p1: d.p1Char, p2: d.p2Char };
-                    
-                    // 화면 전환
-                    document.getElementById('char-select-screen').style.display = 'none';
-                    document.getElementById('game-container').style.display = 'block';
-                    
-                    // 게임 시작
-                    game = new Phaser.Game(config);
+                } 
+                else if (d.status === 'playing' && !game) {
+                     if (d.map) {
+                        window.selectedChars = { p1: d.p1Char, p2: d.p2Char };
+                        mapData = d.map;
+                        startGame();
+                     }
                 }
             });
-        }, 1000);
+        }, 1500);
 
-        // ==========================================
-        // [Phaser 게임 로직]
-        // ==========================================
+        function startGame() {
+            if(game) return;
+            document.getElementById('lobby-screen').style.display = 'none';
+            document.getElementById('char-select-screen').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            game = new Phaser.Game(config);
+        }
+
         class Unit {
             constructor(scene, data, lx, ly, isMe) {
-                this.scene = scene; this.name = data.name; this.maxHp = data.hp; this.hp = data.hp; this.mp = 0; this.maxMp = data.mp || 0;
-                this.localX = lx; this.localY = ly; this.isMe = isMe; this.prevX = lx; this.prevY = ly;
+                this.scene = scene;
+                this.name = data.name; this.maxHp = data.hp; this.hp = data.hp; 
+                this.mp = 0; this.maxMp = data.mp || 0;
+                this.localX = lx; this.localY = ly; this.isMe = isMe;
+                this.prevX = lx; this.prevY = ly;
+                
                 this.skills = data.skills.map(k => ({...DB.SKILLS[k], id: k}));
                 this.passive = data.passive ? DB.PASSIVES[data.passive] : null;
                 this.moveRange = data.move; this.cooldowns = {}; 
-                // 상태값
-                this.movedDistance = 0; this.arrows = 0;
                 
+                this.shieldThrowUsed = false; this.aimActive = false; 
+                this.moveBuffTurns = 0; this.hitCount = 0;
+                this.arrows = 0; this.movedDistance = 0; this.pathDetectActive = false;
+
                 const pos = gridToWorld(lx, ly);
                 let artKey = data.name === "보우 마스터" ? "bowmaster" : data.name.toLowerCase();
                 if(!PIXEL_DATA[artKey]) artKey = "knight";
@@ -276,11 +324,19 @@
                 this.hpText = scene.add.text(pos.x, pos.y - 35, `${this.hp}`, { fontSize: '14px', fontStyle: 'bold' }).setOrigin(0.5);
 
                 this.sprite.on('pointerdown', () => {
-                   scene.descText.setText(`[${this.name}]\nHP:${this.hp}/${this.maxHp} MP:${this.mp}\n상태: ${this.passive?.name || '-'}`);
+                    // 1. 정보 표시
+                    scene.descText.setText(`[${this.name}]\nHP:${this.hp}/${this.maxHp} MP:${this.mp}\n상태: ${this.passive?.name || '없음'}`);
+                    
+                    // 2. 이동 모드 발동 (내 캐릭터 클릭 시)
+                    if(isMe && gameState === STATE.IDLE) {
+                        window.onTileClick(this.localX, this.localY);
+                    }
                 });
             }
+
             updatePos(lx, ly) {
-                if (this.isMe) this.movedDistance += (Math.abs(this.localX - lx) + Math.abs(this.localY - ly));
+                const dist = Math.abs(this.localX - lx) + Math.abs(this.localY - ly);
+                if (this.isMe) this.movedDistance += dist;
                 this.localX = lx; this.localY = ly;
                 const pos = gridToWorld(lx, ly);
                 this.sprite.x = pos.x; this.sprite.y = pos.y;
@@ -292,43 +348,41 @@
         }
 
         const config = {
-            type: Phaser.AUTO, parent: 'game-container', width: 800, height: 600,
+            type: Phaser.AUTO, parent: 'game-container', width: 800, height: 700,
             backgroundColor: '#1a1a1a', scene: { preload: preload, create: create }
         };
 
-        let hudP1, hudP2, actionMenu, highlights = [];
+        let hudTextP1, hudTextP2, actionMenu, highlights = [];
         let playerUnit, enemyUnit;
 
         function preload() {
             const createArt = (key, colors, pixels) => {
                 const canvas = this.textures.createCanvas(key, 32, 32);
                 const ctx = canvas.context;
-                const s = 32 / pixels.length;
-                pixels.forEach((row, y) => [...row].forEach((col, x) => {
-                    if(col!==' ') { ctx.fillStyle=colors[col]; ctx.fillRect(x*s, y*s, s, s); }
-                }));
+                const size = 32 / pixels.length;
+                for(let y=0; y<pixels.length; y++) for(let x=0; x<pixels[y].length; x++) {
+                    if(pixels[y][x] !== ' ') { ctx.fillStyle = colors[pixels[y][x]]; ctx.fillRect(x*size, y*size, size, size); }
+                }
                 canvas.refresh();
             };
             Object.keys(PIXEL_DATA).forEach(k => createArt(k+'_art', PIXEL_DATA[k].colors, PIXEL_DATA[k].data));
         }
 
         function create() {
-            // ★ 최후의 안전장치: 맵 데이터가 없으면 여기서라도 생성
-            if (!mapData || mapData.length === 0) mapData = generateMap();
+            if (!mapData || mapData.length === 0) { console.error("Map Data Missing!"); return; }
 
             const sX = (800 - (mapWidth * gridSize)) / 2;
-            const sY = (600 - (mapHeight * gridSize)) / 2 + 30;
+            const sY = (700 - (mapHeight * gridSize)) / 2 + 20;
 
             for (let x = 0; x < mapWidth; x++) {
                 for (let y = 0; y < mapHeight; y++) {
                     const sPos = toServer(x, y);
-                    // 배열 접근 안전 처리
-                    const cell = (mapData[sPos.x]) ? mapData[sPos.x][sPos.y] : {type:'Grass'}; 
-                    const type = cell.type || 'Grass';
+                    const cell = (mapData[sPos.x]) ? mapData[sPos.x][sPos.y] : null;
+                    const type = cell ? cell.type : 'Grass';
                     
                     let color = type === 'Water' ? 0x1a4a7a : type === 'Mountain' ? 0x4a4a4a : type === 'Sand' ? 0x8a7a4a : 0x3d5e3a;
                     const tile = this.add.rectangle(sX + x*gridSize + 30, sY + y*gridSize + 30, 56, 56, color).setStrokeStyle(1, 0x000, 0.5).setInteractive();
-                    tile.on('pointerdown', () => onTileClick(x, y));
+                    tile.on('pointerdown', () => window.onTileClick(x, y));
                 }
             }
 
@@ -339,18 +393,19 @@
             enemyUnit = new Unit(this, DB.CHARACTERS[enK], 5, 0, false);
 
             this.add.rectangle(400, 25, 800, 50, 0x222222);
-            hudP1 = this.add.text(20, 15, "", { fontSize: '18px', fill: '#0f0' });
-            hudP2 = this.add.text(780, 15, "", { fontSize: '18px', fill: '#f00' }).setOrigin(1, 0);
+            hudTextP1 = this.add.text(20, 15, "", { fontSize: '18px', fill: '#0f0' });
+            hudTextP2 = this.add.text(780, 15, "", { fontSize: '18px', fill: '#f00' }).setOrigin(1, 0);
             
-            this.add.rectangle(400, 560, 780, 70, 0x000000, 0.8).setStrokeStyle(1, 0x555);
-            this.descText = this.add.text(400, 560, "대기 중...", { fontSize: '16px', align: 'center' }).setOrigin(0.5);
+            // 하단 설명창
+            this.add.rectangle(400, 660, 780, 70, 0x000000, 0.8).setStrokeStyle(1, 0x555);
+            this.descText = this.add.text(400, 660, "대기 중...", { fontSize: '16px', align: 'center' }).setOrigin(0.5);
 
             actionMenu = this.add.container(680, 100);
             updateHUD();
             setupSync();
         }
 
-        function onTileClick(lx, ly) {
+        window.onTileClick = function(lx, ly) {
             if (!isMyTurn || gameState === STATE.BUSY) return;
 
             if (gameState === STATE.IDLE && lx === playerUnit.localX && ly === playerUnit.localY) {
@@ -421,7 +476,7 @@
 
             if (skill.triggerReAction) {
                 endTurnEffects(playerUnit);
-                playerUnit.scene.descText.setText("재행동! (MP회복/쿨감 적용됨)");
+                playerUnit.scene.descText.setText("재행동 발동! (쿨타임/MP 회복됨)");
                 setTimeout(() => { gameState = STATE.IDLE; updateDB(false); }, 800);
             } else {
                 setTimeout(() => updateDB(true), 500);
@@ -468,18 +523,19 @@
 
         function updateHUD() {
             if(!playerUnit || !enemyUnit) return;
-            hudP1.setText(`[나] HP:${playerUnit.hp} MP:${playerUnit.mp}`);
-            hudP2.setText(`[적] HP:${enemyUnit.hp} MP:${enemyUnit.mp}`);
+            hudTextP1.setText(`[나] HP:${playerUnit.hp} MP:${playerUnit.mp}`);
+            hudTextP2.setText(`[적] HP:${enemyUnit.hp} MP:${enemyUnit.mp}`);
         }
 
         function showMoveRange(sx, sy, r) {
             for (let x = 0; x < mapWidth; x++) for (let y = 0; y < mapHeight; y++) {
                 const d = Math.abs(x - sx) + Math.abs(y - sy);
                 const sPos = toServer(x, y);
-                const cell = mapData[sPos.x] ? mapData[sPos.x][sPos.y] : {type:'Grass'};
-                const t = cell.type;
+                const cell = (mapData[sPos.x]) ? mapData[sPos.x][sPos.y] : null;
+                const t = cell ? cell.type : 'Grass';
                 const isEnemy = (x === enemyUnit.localX && y === enemyUnit.localY);
                 if (t === 'Mountain' || t === 'Water' || d === 0 || d > r || isEnemy) continue;
+                
                 const p = gridToWorld(x, y);
                 const rect = playerUnit.scene.add.rectangle(p.x, p.y, 50, 50, 0x0000ff, 0.3);
                 highlights.push({x, y, rect});
@@ -497,6 +553,26 @@
         }
 
         function clearHighlights() { highlights.forEach(h => h.rect.destroy()); highlights = []; }
+        function drawIcon(pixels, colors) {
+            const c = document.createElement('canvas'); c.width=32; c.height=32; const ctx=c.getContext('2d');
+            const s=32/pixels.length;
+            pixels.forEach((row, y) => [...row].forEach((col, x) => {
+                if(col!==' ') { ctx.fillStyle=colors[col]; ctx.fillRect(x*s, y*s, s, s); }
+            }));
+            return c.toDataURL();
+        }
+        function generateMap() {
+            let m = [];
+            for(let x=0; x<mapWidth; x++) {
+                m[x] = [];
+                for(let y=0; y<mapHeight; y++) {
+                    let t = 'Grass';
+                    if(x!==5 && Math.random()<0.3) t=['Water','Mountain','Sand'][Math.floor(Math.random()*3)];
+                    m[x][y] = {type: t};
+                }
+            }
+            return m;
+        }
     </script>
 </body>
 </html>
